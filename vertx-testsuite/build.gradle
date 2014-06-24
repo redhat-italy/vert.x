@@ -20,6 +20,7 @@ dependencies {
   compile project(':vertx-core')
   compile project(':vertx-platform')
   compile project(':vertx-hazelcast')
+  compile project(':vertx-infinispan')
 }
 
 // We don't produce a jar
@@ -73,6 +74,24 @@ task hazelcastTest(type: Test) {
   systemProperty 'vertx.test.timeout', 60
   systemProperty 'vertx.mods', "$projectDir/src/test/mod-test"
   systemProperty 'vertx.clusterManagerFactory', 'org.vertx.java.spi.cluster.impl.hazelcast.HazelcastClusterManagerFactory'
+  systemProperty 'io.netty.leakDetectionLevel', 'PARANOID'
+
+
+  include '**/HATest*'
+
+  jvmArgs '-server', '-Xms128m', '-Xmx1024m', '-XX:MaxPermSize=128m', '-XX:NewRatio=2'
+
+  testLogging { exceptionFormat "full" }
+}
+
+task infinispanTest(type: Test) {
+  outputs.upToDateWhen { false }
+
+  testLogging.showStandardStreams = true
+
+  systemProperty 'vertx.test.timeout', 60
+  systemProperty 'vertx.mods', "$projectDir/src/test/mod-test"
+  systemProperty 'vertx.clusterManagerFactory', 'org.vertx.java.spi.cluster.impl.infinispan.InfinispanClusterManagerFactory'
   systemProperty 'io.netty.leakDetectionLevel', 'PARANOID'
 
 
