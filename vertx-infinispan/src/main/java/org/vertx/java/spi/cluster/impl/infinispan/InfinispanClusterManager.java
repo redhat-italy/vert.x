@@ -104,7 +104,6 @@ public class InfinispanClusterManager implements ClusterManager {
     @Override
     public synchronized void leave() {
         System.out.println("LEAVE [" + active + "]");
-        Thread.dumpStack();
         if (!active) {
             return;
         }
