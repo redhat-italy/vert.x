@@ -90,6 +90,7 @@ public class InfinispanClusterManager implements ClusterManager {
         }
         GlobalConfiguration globalConfiguration = new GlobalConfigurationBuilder()
                 .clusteredDefault()
+                .classLoader(GlobalConfiguration.class.getClassLoader())
                 .transport().addProperty("configurationFile", "jgroups-udp.xml")
                 .globalJmxStatistics().allowDuplicateDomains(true).enable()
                 .build();
@@ -102,7 +103,7 @@ public class InfinispanClusterManager implements ClusterManager {
 
     @Override
     public synchronized void leave() {
-        System.out.println("LEAVE [" + active + "]");
+        System.out.println("LEAVE [" + active + "] ");
         if (!active) {
             return;
         }
