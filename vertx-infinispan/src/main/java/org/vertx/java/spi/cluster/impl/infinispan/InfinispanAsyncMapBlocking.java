@@ -19,7 +19,6 @@ public class InfinispanAsyncMapBlocking<K, V> implements AsyncMap<K, V> {
 
     @Override
     public void get(final K k, Handler<AsyncResult<V>> asyncResultHandler) {
-        System.out.println("GET K");
         vertx.executeBlocking(new Action<V>() {
             public V perform() {
                 return cache.get(k);
@@ -29,7 +28,6 @@ public class InfinispanAsyncMapBlocking<K, V> implements AsyncMap<K, V> {
 
     @Override
     public void put(final K k, final V v, Handler<AsyncResult<Void>> completionHandler) {
-        System.out.println("PUT K");
         vertx.executeBlocking(new Action<Void>() {
             public Void perform() {
                 cache.put(k, v);
@@ -40,7 +38,6 @@ public class InfinispanAsyncMapBlocking<K, V> implements AsyncMap<K, V> {
 
     @Override
     public void remove(final K k, Handler<AsyncResult<Void>> completionHandler) {
-        System.out.println("REMOVE K");
         vertx.executeBlocking(new Action<Void>() {
             public Void perform() {
                 cache.remove(k);
