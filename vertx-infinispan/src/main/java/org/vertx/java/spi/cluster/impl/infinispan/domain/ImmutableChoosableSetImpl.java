@@ -28,7 +28,7 @@ public class ImmutableChoosableSetImpl<T> implements ImmutableChoosableSet<T> {
     }
 
     @Override
-    public ImmutableChoosableSet<T> remove(T value) throws ElementNotFoundInSetException {
+    public ImmutableChoosableSet<T> remove(T value) {
         checkSanity(value);
 
         if (value.equals(this.value)) {

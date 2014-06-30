@@ -18,8 +18,8 @@ public class EmptyImmutableChoosableIterable<T> implements ImmutableChoosableSet
     }
 
     @Override
-    public ImmutableChoosableSet<T> remove(T value) throws ElementNotFoundInSetException {
-        throw new ElementNotFoundInSetException();
+    public ImmutableChoosableSet<T> remove(T value) {
+        return this;
     }
 
     @Override

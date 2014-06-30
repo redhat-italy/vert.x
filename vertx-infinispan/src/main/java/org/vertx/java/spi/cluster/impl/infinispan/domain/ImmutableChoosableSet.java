@@ -7,7 +7,7 @@ public interface ImmutableChoosableSet<T> extends ChoosableIterable<T> {
 
     ImmutableChoosableSet<T> add(T value);
 
-    ImmutableChoosableSet<T> remove(T value) throws ElementNotFoundInSetException;
+    ImmutableChoosableSet<T> remove(T value);
 
     T head();
 
