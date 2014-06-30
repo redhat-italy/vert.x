@@ -15,7 +15,6 @@ import org.vertx.java.core.spi.cluster.AsyncMultiMap;
 import org.vertx.java.core.spi.cluster.ClusterManager;
 import org.vertx.java.core.spi.cluster.NodeListener;
 import org.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
-import org.vertx.java.spi.cluster.impl.infinispan.listeners.CacheListener;
 import org.vertx.java.spi.cluster.impl.infinispan.listeners.CacheManagerListener;
 
 import java.util.ArrayList;
@@ -47,13 +46,13 @@ public class InfinispanClusterManager implements ClusterManager {
     @Override
     public synchronized <K, V> AsyncMultiMap<K, V> getAsyncMultiMap(String name) {
         Cache<K, ImmutableChoosableSet<V>> cache = cacheManager.<K, ImmutableChoosableSet<V>>getCache(name, true);
-        return new InfinispanAsyncMultiMap<K, V>(vertxSPI, cache);
+        return new InfinispanAsyncMultiMapBlocking<>(vertxSPI, cache);
     }
 
     @Override
     public synchronized <K, V> AsyncMap<K, V> getAsyncMap(String name) {
         Cache<K, V> cache = cacheManager.<K, V>getCache(name, true);
-        return new InfinispanAsyncMap<>(vertxSPI, cache);
+        return new InfinispanAsyncMapBlocking<>(vertxSPI, cache);
     }
 
     @Override

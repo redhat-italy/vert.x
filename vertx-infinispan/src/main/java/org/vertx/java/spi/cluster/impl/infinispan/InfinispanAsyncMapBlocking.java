@@ -7,12 +7,12 @@ import org.vertx.java.core.spi.Action;
 import org.vertx.java.core.spi.VertxSPI;
 import org.vertx.java.core.spi.cluster.AsyncMap;
 
-public class InfinispanAsyncMap<K, V> implements AsyncMap<K, V> {
+public class InfinispanAsyncMapBlocking<K, V> implements AsyncMap<K, V> {
 
     private VertxSPI vertx;
     private Cache<K, V> cache;
 
-    public InfinispanAsyncMap(VertxSPI vertx, Cache<K, V> cache) {
+    public InfinispanAsyncMapBlocking(VertxSPI vertx, Cache<K, V> cache) {
         this.vertx = vertx;
         this.cache = cache;
     }
