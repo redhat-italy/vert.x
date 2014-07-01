@@ -31,46 +31,34 @@ public class InfinispanAsyncMultiMapBlocking<K, V> implements AsyncMultiMap<K, V
 
     @Override
     public void get(final K k, Handler<AsyncResult<ChoosableIterable<V>>> asyncResultHandler) {
-        vertx.executeBlocking(new Action<ChoosableIterable<V>>() {
-            @Override
-            public ChoosableIterable<V> perform() {
-                return cache.get(k);
-            }
-        }, asyncResultHandler);
+        vertx.executeBlocking(() -> cache.get(k), asyncResultHandler);
     }
 
     @Override
     public void add(final K k, final V v, final Handler<AsyncResult<Void>> completionHandler) {
-        vertx.executeBlocking(new Action<Void>() {
-
-            @Override
-            public Void perform() {
-                ImmutableChoosableSet<V> oldValue = cache.get(k);
-                if (oldValue != null) {
-                    if (!cache.replace(k, oldValue, oldValue.add(v))) {
-                        throw new RuntimeException("Value changed during update");
-                    }
-                } else {
-                    cache.put(k, new ImmutableChoosableSetImpl<V>(v));
+        vertx.executeBlocking(() -> {
+            ImmutableChoosableSet<V> oldValue = cache.get(k);
+            if (oldValue != null) {
+                if (!cache.replace(k, oldValue, oldValue.add(v))) {
+                    throw new RuntimeException("Value changed during update");
                 }
-                return null;
+            } else {
+                cache.put(k, new ImmutableChoosableSetImpl<V>(v));
             }
+            return null;
         }, completionHandler);
     }
 
     @Override
     public void remove(final K k, final V v, Handler<AsyncResult<Void>> completionHandler) {
-        vertx.executeBlocking(new Action<Void>() {
-            @Override
-            public Void perform() {
-                ImmutableChoosableSet<V> oldValue = cache.get(k);
-                if (oldValue != null) {
-                    if(cache.replace(k, oldValue, oldValue.remove(v))) {
-                        throw new RuntimeException("Value changed during update");
-                    }
+        vertx.executeBlocking(() -> {
+            ImmutableChoosableSet<V> oldValue = cache.get(k);
+            if (oldValue != null) {
+                if (cache.replace(k, oldValue, oldValue.remove(v))) {
+                    throw new RuntimeException("Value changed during update");
                 }
-                return null;
             }
+            return null;
         }, completionHandler);
     }
 

@@ -2,8 +2,6 @@ package org.vertx.java.spi.cluster.impl.infinispan.helpers;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.vertx.java.spi.cluster.impl.infinispan.callback.Callback;
-import org.vertx.java.spi.cluster.impl.infinispan.callback.ExceptionCallback;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -19,19 +17,11 @@ public class TestFutureListenerSubscriber {
         final AtomicInteger successCounter = new AtomicInteger(0);
 
         FutureListenerHelper<String> subscriber = new FutureListenerHelper<>();
-        subscriber.onSuccess(new Callback<String>() {
-            @Override
-            public void execute(String value) {
-                successCounter.incrementAndGet();
-                Assert.assertEquals(expected, value);
-            }
+        subscriber.onSuccess((value) -> {
+            successCounter.incrementAndGet();
+            Assert.assertEquals(expected, value);
         });
-        subscriber.onError(new ExceptionCallback() {
-            @Override
-            public void execute(Exception value) {
-                Assert.fail();
-            }
-        });
+        subscriber.onError((e) -> Assert.fail());
 
         subscriber.futureDone(new StringFutureMock(expected));
 
@@ -44,19 +34,11 @@ public class TestFutureListenerSubscriber {
         final AtomicInteger errorCounter = new AtomicInteger(0);
 
         FutureListenerHelper<String> subscriber = new FutureListenerHelper<>();
-        subscriber.onSuccess(new Callback<String>() {
-            @Override
-            public void execute(String value) {
-                Assert.fail();
-            }
-        });
-        subscriber.onError(new ExceptionCallback() {
-            @Override
-            public void execute(Exception value) {
-                errorCounter.incrementAndGet();
+        subscriber.onSuccess((value) -> Assert.fail());
+        subscriber.onError((value) -> {
+            errorCounter.incrementAndGet();
 
-                Assert.assertEquals(expected, value);
-            }
+            Assert.assertEquals(expected, value);
         });
 
         subscriber.futureDone(new ExceptionFutureMock(expected));
@@ -68,18 +50,8 @@ public class TestFutureListenerSubscriber {
         final AtomicInteger errorCounter = new AtomicInteger(0);
 
         FutureListenerHelper<String> subscriber = new FutureListenerHelper<>();
-        subscriber.onSuccess(new Callback<String>() {
-            @Override
-            public void execute(String value) {
-                Assert.fail();
-            }
-        });
-        subscriber.onError(new ExceptionCallback() {
-            @Override
-            public void execute(Exception value) {
-                errorCounter.incrementAndGet();
-            }
-        });
+        subscriber.onSuccess((value) -> Assert.fail());
+        subscriber.onError((value) -> errorCounter.incrementAndGet());
 
         subscriber.futureDone(new IsNotDoneFutureMock("value"));
         Assert.assertEquals(1, errorCounter.get());
