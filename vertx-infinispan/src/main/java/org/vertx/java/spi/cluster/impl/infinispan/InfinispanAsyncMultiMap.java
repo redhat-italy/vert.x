@@ -9,6 +9,7 @@ import org.vertx.java.core.logging.impl.LoggerFactory;
 import org.vertx.java.core.spi.cluster.AsyncMultiMap;
 import org.vertx.java.core.spi.cluster.ChoosableIterable;
 import org.vertx.java.spi.cluster.impl.infinispan.callback.Callback;
+import org.vertx.java.spi.cluster.impl.infinispan.callback.FailureCallback;
 import org.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
 import org.vertx.java.spi.cluster.impl.infinispan.helpers.CacheAsyncWrapper;
 
@@ -27,7 +28,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     public void get(final K k, final Handler<AsyncResult<ChoosableIterable<V>>> completionHandler) {
         wrapper
                 .get(k)
-                .onError(completionHandler)
+                .onError(new FailureCallback<>(completionHandler))
                 .onSuccess(new CompleteCallback<ImmutableChoosableSet<V>>(completionHandler));
     }
 
@@ -35,14 +36,14 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     public void add(final K k, final V v, final Handler<AsyncResult<Void>> completionHandler) {
         wrapper
                 .get(k)
-                .onError(completionHandler)
+                .onError(new FailureCallback<>(completionHandler))
                 .onSuccess(new Callback<ImmutableChoosableSet<V>>() {
 
                     @Override
                     public void execute(ImmutableChoosableSet<V> value) {
                         wrapper
                                 .put(k, value.add(v))
-                                .onError(completionHandler)
+                                .onError(new FailureCallback<>(completionHandler))
                                 .onSuccess(new CompleteCallbackNoResult<ImmutableChoosableSet<V>>(completionHandler));
                     }
                 });
@@ -52,13 +53,13 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     public void remove(final K k, final V v, final Handler<AsyncResult<Void>> completionHandler) {
         wrapper
                 .get(k)
-                .onError(completionHandler)
+                .onError(new FailureCallback<>(completionHandler))
                 .onSuccess(new Callback<ImmutableChoosableSet<V>>() {
                     @Override
                     public void execute(ImmutableChoosableSet<V> value) {
                         wrapper
                                 .remove(k, value.remove(v))
-                                .onError(completionHandler)
+                                .onError(new FailureCallback<>(completionHandler))
                                 .onSuccess(new CompleteCallbackNoResult<ImmutableChoosableSet<V>>(completionHandler));
                     }
                 });
@@ -79,7 +80,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
         @Override
         public void execute(T value) {
-            DefaultFutureResult<ChoosableIterable<V>> result = new DefaultFutureResult<ChoosableIterable<V>>();
+            DefaultFutureResult<ChoosableIterable<V>> result = new DefaultFutureResult<>();
             result.setResult(value);
             result.complete();
             handler.handle(result);
@@ -96,7 +97,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
         @Override
         public void execute(T value) {
-            DefaultFutureResult<Void> result = new DefaultFutureResult<Void>();
+            DefaultFutureResult<Void> result = new DefaultFutureResult<>();
             result.setResult(null);
             result.complete();
             handler.handle(result);
