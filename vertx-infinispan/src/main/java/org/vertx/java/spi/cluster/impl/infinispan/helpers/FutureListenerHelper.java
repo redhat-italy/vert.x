@@ -4,6 +4,7 @@ import org.infinispan.commons.util.concurrent.FutureListener;
 import org.vertx.java.core.AsyncResult;
 import org.vertx.java.core.Handler;
 import org.vertx.java.spi.cluster.impl.infinispan.callback.Callback;
+import org.vertx.java.spi.cluster.impl.infinispan.callback.ExceptionCallback;
 import org.vertx.java.spi.cluster.impl.infinispan.callback.FailureCallback;
 import org.vertx.java.spi.cluster.impl.infinispan.callback.UndefinedCallback;
 
@@ -27,8 +28,8 @@ public class FutureListenerHelper<T> implements FutureListener<T> {
         }
     }
 
-    public <Z> FutureListenerHelper<T> onError(Handler<AsyncResult<Z>> onError) {
-        this.onError = new FailureCallback<Z>(onError);
+    public FutureListenerHelper<T> onError(ExceptionCallback onError) {
+        this.onError = onError;
         return this;
     }
 
