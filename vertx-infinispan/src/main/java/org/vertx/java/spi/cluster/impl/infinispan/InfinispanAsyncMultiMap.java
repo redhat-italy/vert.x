@@ -26,6 +26,7 @@ import io.vertx.core.spi.cluster.ChoosableIterable;
 import org.infinispan.Cache;
 import org.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
 import org.vertx.java.spi.cluster.impl.infinispan.helpers.CacheAsyncWrapper;
+import org.vertx.java.spi.cluster.impl.infinispan.helpers.FutureListenerHelper;
 
 
 public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
@@ -39,7 +40,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     }
 
     @Override
-    public void get(final K k, final Handler<AsyncResult<ChoosableIterable<V>>> completionHandler) {
+    public void get(final K k, final Handler<AsyncResult<ChoosableIterable<V>>> handler) {
         FutureResultImpl<ChoosableIterable<V>> result = new FutureResultImpl<>();
 
         wrapper
@@ -47,17 +48,17 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
                 .onError((e) -> {
                     result.setFailure(e);
                     result.failed();
-                    completionHandler.handle(result);
+                    handler.handle(result);
                 })
                 .onSuccess((value) -> {
                     result.setResult(value);
                     result.complete();
-                    completionHandler.handle(result);
+                    handler.handle(result);
                 });
     }
 
     @Override
-    public void add(final K k, final V v, final Handler<AsyncResult<Void>> completionHandler) {
+    public void add(final K k, final V v, final Handler<AsyncResult<Void>> handler) {
         FutureResultImpl<Void> result = new FutureResultImpl<>();
 
         wrapper
@@ -65,26 +66,32 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
                 .onError((e) -> {
                     result.setFailure(e);
                     result.failed();
-                    completionHandler.handle(result);
+                    handler.handle(result);
                 })
                 .onSuccess((value) -> {
-                    wrapper
-                            .put(k, value.add(v))
-                            .onError((e) -> {
-                                result.setFailure(e);
-                                result.failed();
-                                completionHandler.handle(result);
-                            })
-                            .onSuccess((set) -> {
-                                result.setResult(null);
-                                result.complete();
-                                completionHandler.handle(result);
-                            });
+                    if (value != null) {
+                        wrapper
+                                .put(k, value.add(v))
+                                .onError((e) -> {
+                                    result.setFailure(e);
+                                    result.failed();
+                                    handler.handle(result);
+                                })
+                                .onSuccess((set) -> {
+                                    result.setResult(null);
+                                    result.complete();
+                                    handler.handle(result);
+                                });
+                    } else {
+                        result.setResult(null);
+                        result.complete();
+                        handler.handle(result);
+                    }
                 });
     }
 
     @Override
-    public void remove(final K k, final V v, final Handler<AsyncResult<Void>> completionHandler) {
+    public void remove(final K k, final V v, final Handler<AsyncResult<Void>> handler) {
         FutureResultImpl<Void> result = new FutureResultImpl<>();
 
         wrapper
@@ -92,21 +99,32 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
                 .onError((e) -> {
                     result.setFailure(e);
                     result.failed();
-                    completionHandler.handle(result);
+                    handler.handle(result);
                 })
                 .onSuccess((value) -> {
-                    wrapper
-                            .remove(k, value.remove(v))
-                            .onError((e) -> {
-                                result.setFailure(e);
-                                result.failed();
-                                completionHandler.handle(result);
-                            })
-                            .onSuccess((set) -> {
-                                result.setResult(null);
-                                result.complete();
-                                completionHandler.handle(result);
-                            });
+                    if (value != null) {
+                        FutureListenerHelper<ImmutableChoosableSet<V>> helper;
+                        if (value.isEmpty()) {
+                            helper = wrapper.remove(k);
+                        } else {
+                            helper = wrapper.put(k, value.remove(v));
+                        }
+                        helper
+                                .onError((e) -> {
+                                    result.setFailure(e);
+                                    result.failed();
+                                    handler.handle(result);
+                                })
+                                .onSuccess((set) -> {
+                                    result.setResult(null);
+                                    result.complete();
+                                    handler.handle(result);
+                                });
+                    } else {
+                        result.setResult(null);
+                        result.complete();
+                        handler.handle(result);
+                    }
                 });
     }
 

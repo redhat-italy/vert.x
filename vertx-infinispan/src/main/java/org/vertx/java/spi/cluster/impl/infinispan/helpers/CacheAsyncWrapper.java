@@ -18,9 +18,8 @@ package org.vertx.java.spi.cluster.impl.infinispan.helpers;
 
 import org.infinispan.Cache;
 import org.infinispan.commons.util.concurrent.NotifyingFuture;
-import io.vertx.core.spi.cluster.ChoosableIterable;
 
-public class CacheAsyncWrapper<K1, V1 extends ChoosableIterable> {
+public class CacheAsyncWrapper<K1, V1> {
 
     private final Cache<K1, V1> cache;
 
@@ -37,12 +36,8 @@ public class CacheAsyncWrapper<K1, V1 extends ChoosableIterable> {
         return perform(cache.putAsync(k, v));
     }
 
-    public FutureListenerHelper<V1> remove(K1 k, V1 v) {
-        if(v.isEmpty()) {
-            return perform(cache.removeAsync(k));
-        } else {
-            return perform(cache.putAsync(k, v));
-        }
+    public FutureListenerHelper<V1> remove(K1 k) {
+        return perform(cache.removeAsync(k));
     }
 
     private <T> FutureListenerHelper<T> perform(NotifyingFuture<T> future) {
