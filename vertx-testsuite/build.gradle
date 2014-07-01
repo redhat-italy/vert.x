@@ -93,7 +93,8 @@ task infinispanTest(type: Test) {
   systemProperty 'vertx.mods', "$projectDir/src/test/mod-test"
   systemProperty 'vertx.clusterManagerFactory', 'org.vertx.java.spi.cluster.impl.infinispan.InfinispanClusterManagerFactory'
   systemProperty 'io.netty.leakDetectionLevel', 'PARANOID'
-
+  systemProperty 'jgroups.bind_addr', '127.0.0.1'
+  systemProperty 'java.net.preferIPv4Stack', 'true'
 
   include '**/HATest*'
 
