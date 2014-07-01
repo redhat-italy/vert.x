@@ -9,13 +9,14 @@ import org.infinispan.configuration.global.GlobalConfigurationBuilder;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.manager.EmbeddedCacheManager;
 import org.infinispan.remoting.transport.Address;
+import org.vertx.java.core.logging.Logger;
+import org.vertx.java.core.logging.impl.LoggerFactory;
 import org.vertx.java.core.spi.VertxSPI;
 import org.vertx.java.core.spi.cluster.AsyncMap;
 import org.vertx.java.core.spi.cluster.AsyncMultiMap;
 import org.vertx.java.core.spi.cluster.ClusterManager;
 import org.vertx.java.core.spi.cluster.NodeListener;
 import org.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
-import org.vertx.java.spi.cluster.impl.infinispan.listeners.CacheListener;
 import org.vertx.java.spi.cluster.impl.infinispan.listeners.CacheManagerListener;
 
 import java.util.ArrayList;
@@ -24,13 +25,14 @@ import java.util.Map;
 
 public class InfinispanClusterManager implements ClusterManager {
 
+    private final static Logger LOG = LoggerFactory.getLogger(InfinispanClusterManager.class);
+
     private final Configuration syncConfiguration;
     private final Configuration asyncConfiguration;
 
     private EmbeddedCacheManager cacheManager;
     private VertxSPI vertxSPI;
     private boolean active = false;
-    private NodeListener listener;
 
     public InfinispanClusterManager(VertxSPI vertxSPI) {
         this.vertxSPI = vertxSPI;
@@ -47,13 +49,13 @@ public class InfinispanClusterManager implements ClusterManager {
     @Override
     public synchronized <K, V> AsyncMultiMap<K, V> getAsyncMultiMap(String name) {
         Cache<K, ImmutableChoosableSet<V>> cache = cacheManager.<K, ImmutableChoosableSet<V>>getCache(name, true);
-        return new InfinispanAsyncMultiMap<K, V>(vertxSPI, cache);
+        return new InfinispanAsyncMultiMapBlocking<>(vertxSPI, cache);
     }
 
     @Override
     public synchronized <K, V> AsyncMap<K, V> getAsyncMap(String name) {
         Cache<K, V> cache = cacheManager.<K, V>getCache(name, true);
-        return new InfinispanAsyncMap<>(vertxSPI, cache);
+        return new InfinispanAsyncMapBlocking<>(vertxSPI, cache);
     }
 
     @Override
@@ -78,13 +80,14 @@ public class InfinispanClusterManager implements ClusterManager {
 
     @Override
     public void nodeListener(NodeListener listener) {
-        this.listener = listener;
         this.cacheManager.addListener(new CacheManagerListener(listener));
     }
 
     @Override
     public synchronized void join() {
-        System.out.println("JOIN [" + this + "]");
+        if(LOG.isDebugEnabled()) {
+            LOG.debug(String.format("JOIN [%s]", this.toString()));
+        }
         if (active) {
             return;
         }
@@ -103,7 +106,9 @@ public class InfinispanClusterManager implements ClusterManager {
 
     @Override
     public synchronized void leave() {
-        System.out.println("LEAVE [" + active + "] ");
+        if(LOG.isDebugEnabled()) {
+            LOG.debug(String.format("LEAVE Active[%s] [%s]", active, this.toString()));
+        }
         if (!active) {
             return;
         }

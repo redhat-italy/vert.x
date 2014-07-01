@@ -98,7 +98,7 @@ task infinispanTest(type: Test) {
 
   include '**/HATest*'
 
-  jvmArgs '-server', '-Xms128m', '-Xmx1024m', '-XX:MaxPermSize=128m', '-XX:NewRatio=2'
+  jvmArgs '-server', '-Xms128m', '-Xmx1024m', '-XX:MaxPermSize=128m', '-XX:NewRatio=2', '-Djava.net.preferIPv4Stack=true', '-Djgroups.bind_addr=127.0.0.1'
 
   testLogging { exceptionFormat "full" }
 }
