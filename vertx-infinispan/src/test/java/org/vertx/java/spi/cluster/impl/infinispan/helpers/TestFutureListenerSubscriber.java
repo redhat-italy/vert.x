@@ -1,4 +1,4 @@
-package org.vertx.java.spi.cluster.impl.infinispan.futures;
+package org.vertx.java.spi.cluster.impl.infinispan.helpers;
 
 import junit.framework.Assert;
 import org.junit.Test;
