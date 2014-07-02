@@ -23,7 +23,7 @@ import org.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSetIm
 
 import java.util.Iterator;
 
-public class TestChoosableSet {
+public class ChoosableSetTest {
 
     @Test
     public void testOneElementSet() {

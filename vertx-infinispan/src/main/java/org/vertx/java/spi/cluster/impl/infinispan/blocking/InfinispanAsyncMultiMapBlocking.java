@@ -14,12 +14,10 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package org.vertx.java.spi.cluster.impl.infinispan;
+package org.vertx.java.spi.cluster.impl.infinispan.blocking;
 
-import io.vertx.core.spi.cluster.Action;
 import io.vertx.core.spi.cluster.VertxSPI;
 import org.infinispan.Cache;
-import org.infinispan.commons.util.concurrent.FutureListener;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 
@@ -29,9 +27,6 @@ import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ChoosableIterable;
 import org.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
 import org.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSetImpl;
-import org.vertx.java.spi.cluster.impl.infinispan.domain.support.ElementNotFoundInSetException;
-
-import java.util.concurrent.Future;
 
 public class InfinispanAsyncMultiMapBlocking<K, V> implements AsyncMultiMap<K, V> {
 

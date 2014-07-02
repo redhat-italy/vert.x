@@ -18,30 +18,30 @@ package org.vertx.java.spi.cluster.impl.infinispan.helpers;
 
 import org.infinispan.Cache;
 import org.infinispan.commons.util.concurrent.NotifyingFuture;
+import org.vertx.java.spi.cluster.impl.infinispan.callback.Callback;
 
 public class CacheAsyncWrapper<K1, V1> {
 
     private final Cache<K1, V1> cache;
 
-
     public CacheAsyncWrapper(Cache<K1, V1> cache) {
         this.cache = cache;
     }
 
-    public FutureListenerHelper<V1> get(K1 k) {
-        return perform(cache.getAsync(k));
+    public FutureListenerHelper<V1> get(K1 k, Callback<V1> onSuccess, Callback<Exception> onError) {
+        return perform(cache.getAsync(k), onSuccess, onError);
     }
 
-    public FutureListenerHelper<V1> put(K1 k, V1 v) {
-        return perform(cache.putAsync(k, v));
+    public FutureListenerHelper<V1> put(K1 k, V1 v, Callback<V1> onSuccess, Callback<Exception> onError) {
+        return perform(cache.putAsync(k, v), onSuccess, onError);
     }
 
-    public FutureListenerHelper<V1> remove(K1 k) {
-        return perform(cache.removeAsync(k));
+    public FutureListenerHelper<V1> remove(K1 k, Callback<V1> onSuccess, Callback<Exception> onError) {
+        return perform(cache.removeAsync(k), onSuccess, onError);
     }
 
-    private <T> FutureListenerHelper<T> perform(NotifyingFuture<T> future) {
-        FutureListenerHelper<T> subscriber = new FutureListenerHelper<>();
+    private FutureListenerHelper<V1> perform(NotifyingFuture<V1> future, Callback<V1> onSuccess, Callback<Exception> onError) {
+        FutureListenerHelper<V1> subscriber = new FutureListenerHelper<>(onSuccess, onError);
         future.attachListener(subscriber);
         return subscriber;
     }

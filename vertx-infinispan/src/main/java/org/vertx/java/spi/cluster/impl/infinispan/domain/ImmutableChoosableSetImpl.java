@@ -16,8 +16,6 @@
 
 package org.vertx.java.spi.cluster.impl.infinispan.domain;
 
-import org.vertx.java.spi.cluster.impl.infinispan.domain.support.ElementNotFoundInSetException;
-
 import java.util.Iterator;
 
 public class ImmutableChoosableSetImpl<T> implements ImmutableChoosableSet<T> {
@@ -33,7 +31,7 @@ public class ImmutableChoosableSetImpl<T> implements ImmutableChoosableSet<T> {
     }
 
     public ImmutableChoosableSetImpl(T value) {
-        this(value, EmptyImmutableChoosableIterable.emptySet);
+        this(value, EmptyImmutableChoosableSet.emptySet);
     }
 
     @Override

@@ -14,7 +14,7 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package org.vertx.java.spi.cluster.impl.infinispan;
+package org.vertx.java.spi.cluster.impl.infinispan.blocking;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;

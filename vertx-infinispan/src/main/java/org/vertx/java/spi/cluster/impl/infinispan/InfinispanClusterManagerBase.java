@@ -28,16 +28,19 @@ import org.infinispan.configuration.global.GlobalConfigurationBuilder;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.manager.EmbeddedCacheManager;
 import org.infinispan.remoting.transport.Address;
+import org.vertx.java.spi.cluster.impl.infinispan.async.InfinispanAsyncMap;
+import org.vertx.java.spi.cluster.impl.infinispan.async.InfinispanAsyncMultiMap;
 import org.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
+import org.vertx.java.spi.cluster.impl.infinispan.domain.serializer.ImmutableChoosableSetSerializer;
 import org.vertx.java.spi.cluster.impl.infinispan.listeners.CacheManagerListener;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class InfinispanClusterManager implements ClusterManager {
+public abstract class InfinispanClusterManagerBase implements ClusterManager {
 
-    private final static Logger LOG = LoggerFactory.getLogger(InfinispanClusterManager.class);
+    private final static Logger LOG = LoggerFactory.getLogger(InfinispanClusterManagerBase.class);
 
     private final Configuration syncConfiguration;
     private final Configuration asyncConfiguration;
@@ -46,7 +49,7 @@ public class InfinispanClusterManager implements ClusterManager {
     private VertxSPI vertxSPI;
     private boolean active = false;
 
-    public InfinispanClusterManager() {
+    public InfinispanClusterManagerBase() {
         this.syncConfiguration = new ConfigurationBuilder()
                 .clustering().cacheMode(CacheMode.DIST_SYNC)
                 .hash().numOwners(2)
@@ -57,36 +60,34 @@ public class InfinispanClusterManager implements ClusterManager {
                 .build();
     }
 
+    protected final VertxSPI getVertxSPI() {
+        return vertxSPI;
+    }
+
+    protected final EmbeddedCacheManager getCacheManager() {
+        return cacheManager;
+    }
+
+    protected final Configuration getSyncConfiguration() {
+        return syncConfiguration;
+    }
+
+    protected final Configuration getAsyncConfiguration() {
+        return asyncConfiguration;
+    }
+
     @Override
-    public void setVertx(VertxSPI vertxSPI) {
+    public final void setVertx(VertxSPI vertxSPI) {
         this.vertxSPI = vertxSPI;
     }
 
     @Override
-    public synchronized <K, V> AsyncMultiMap<K, V> getAsyncMultiMap(String name) {
-        Cache<K, ImmutableChoosableSet<V>> cache = cacheManager.<K, ImmutableChoosableSet<V>>getCache(name, true);
-        return new InfinispanAsyncMultiMapBlocking<>(vertxSPI, cache);
-    }
-
-    @Override
-    public synchronized <K, V> AsyncMap<K, V> getAsyncMap(String name) {
-        Cache<K, V> cache = cacheManager.<K, V>getCache(name, true);
-        return new InfinispanAsyncMapBlocking<>(vertxSPI, cache);
-    }
-
-    @Override
-    public synchronized <K, V> Map<K, V> getSyncMap(String name) {
-        cacheManager.defineConfiguration(name, syncConfiguration);
-        return cacheManager.<K, V>getCache(name, true);
-    }
-
-    @Override
-    public String getNodeID() {
+    public final String getNodeID() {
         return cacheManager.getAddress().toString();
     }
 
     @Override
-    public List<String> getNodes() {
+    public final List<String> getNodes() {
         ArrayList<String> nodes = new ArrayList<>();
         for (Address address : cacheManager.getMembers()) {
             nodes.add(address.toString());
@@ -95,12 +96,12 @@ public class InfinispanClusterManager implements ClusterManager {
     }
 
     @Override
-    public void nodeListener(NodeListener listener) {
+    public final void nodeListener(NodeListener listener) {
         this.cacheManager.addListener(new CacheManagerListener(listener));
     }
 
     @Override
-    public synchronized void join() {
+    public final synchronized void join() {
         if (LOG.isDebugEnabled()) {
             LOG.debug(String.format("JOIN [%s]", this.toString()));
         }
@@ -112,6 +113,7 @@ public class InfinispanClusterManager implements ClusterManager {
                 .classLoader(GlobalConfiguration.class.getClassLoader())
                 .transport().addProperty("configurationFile", "jgroups-udp.xml")
                 .globalJmxStatistics().allowDuplicateDomains(true).enable()
+                .serialization().addAdvancedExternalizer(new ImmutableChoosableSetSerializer())
                 .build();
         cacheManager = new DefaultCacheManager(globalConfiguration, asyncConfiguration);
         cacheManager.start();
@@ -121,7 +123,7 @@ public class InfinispanClusterManager implements ClusterManager {
     }
 
     @Override
-    public synchronized void leave() {
+    public final synchronized void leave() {
         if (LOG.isDebugEnabled()) {
             LOG.debug(String.format("LEAVE Active[%s] [%s]", active, this.toString()));
         }

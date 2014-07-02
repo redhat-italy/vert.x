@@ -14,7 +14,7 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package org.vertx.java.spi.cluster.impl.infinispan;
+package org.vertx.java.spi.cluster.impl.infinispan.async;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
@@ -36,17 +36,17 @@ public class InfinispanAsyncMap<K, V> implements AsyncMap<K, V> {
         FutureResultImpl<V> result = new FutureResultImpl<>();
 
         wrapper
-                .get(k)
-                .onError((e) -> {
-                    result.setFailure(e);
-                    result.failed();
-                    handler.handle(result);
-                })
-                .onSuccess((value) -> {
-                    result.setResult(value);
-                    result.complete();
-                    handler.handle(result);
-                });
+                .get(k,
+                        (value) -> {
+                            result.setResult(value);
+                            result.complete();
+                            handler.handle(result);
+                        },
+                        (e) -> {
+                            result.setFailure(e);
+                            result.failed();
+                            handler.handle(result);
+                        });
     }
 
     @Override
@@ -54,17 +54,17 @@ public class InfinispanAsyncMap<K, V> implements AsyncMap<K, V> {
         FutureResultImpl<Void> result = new FutureResultImpl<>();
 
         wrapper
-                .put(k, v)
-                .onError((e) -> {
-                    result.setFailure(e);
-                    result.failed();
-                    handler.handle(result);
-                })
-                .onSuccess((value) -> {
-                    result.setResult(null);
-                    result.complete();
-                    handler.handle(result);
-                });
+                .put(k, v,
+                        (value) -> {
+                            result.setResult(null);
+                            result.complete();
+                            handler.handle(result);
+                        },
+                        (e) -> {
+                            result.setFailure(e);
+                            result.failed();
+                            handler.handle(result);
+                        });
     }
 
     @Override
@@ -72,16 +72,16 @@ public class InfinispanAsyncMap<K, V> implements AsyncMap<K, V> {
         FutureResultImpl<Void> result = new FutureResultImpl<>();
 
         wrapper
-                .remove(k)
-                .onError((e) -> {
-                    result.setFailure(e);
-                    result.failed();
-                    handler.handle(result);
-                })
-                .onSuccess((value) -> {
-                    result.setResult(null);
-                    result.complete();
-                    handler.handle(result);
-                });
+                .remove(k,
+                        (value) -> {
+                            result.setResult(null);
+                            result.complete();
+                            handler.handle(result);
+                        },
+                        (e) -> {
+                            result.setFailure(e);
+                            result.failed();
+                            handler.handle(result);
+                        });
     }
 }

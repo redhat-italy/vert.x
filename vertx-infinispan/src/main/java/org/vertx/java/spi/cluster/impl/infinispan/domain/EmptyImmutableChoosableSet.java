@@ -16,16 +16,14 @@
 
 package org.vertx.java.spi.cluster.impl.infinispan.domain;
 
-import org.vertx.java.spi.cluster.impl.infinispan.domain.support.ElementNotFoundInSetException;
-
 import java.util.Collections;
 import java.util.Iterator;
 
-public class EmptyImmutableChoosableIterable<T> implements ImmutableChoosableSet<T> {
+public class EmptyImmutableChoosableSet<T> implements ImmutableChoosableSet<T> {
 
-    public static final ImmutableChoosableSet emptySet = new EmptyImmutableChoosableIterable();
+    public static final ImmutableChoosableSet emptySet = new EmptyImmutableChoosableSet();
 
-    private EmptyImmutableChoosableIterable() {
+    private EmptyImmutableChoosableSet() {
     }
 
     @Override

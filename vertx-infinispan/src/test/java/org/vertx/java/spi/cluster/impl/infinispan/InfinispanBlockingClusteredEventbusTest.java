@@ -19,16 +19,17 @@ package org.vertx.java.spi.cluster.impl.infinispan;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.test.core.ClusteredEventBusTest;
 import org.junit.Test;
+import org.vertx.java.spi.cluster.impl.infinispan.async.InfinispanClusterManagerAsync;
+import org.vertx.java.spi.cluster.impl.infinispan.blocking.InfinispanClusterManagerBlocking;
 
-public class InfinispanClusteredEventbusTest extends ClusteredEventBusTest {
+public class InfinispanBlockingClusteredEventbusTest extends ClusteredEventBusTest {
 
     @Override
     protected ClusterManager getClusterManager() {
-        return new InfinispanClusterManager();
+        return new InfinispanClusterManagerBlocking();
     }
 
     @Test
     public void testFoo() {
-
     }
 }

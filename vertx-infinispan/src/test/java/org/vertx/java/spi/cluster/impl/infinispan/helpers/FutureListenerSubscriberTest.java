@@ -25,19 +25,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class TestFutureListenerSubscriber {
+public class FutureListenerSubscriberTest {
 
     @Test
     public void testSuccess() {
         final String expected = "expected";
         final AtomicInteger successCounter = new AtomicInteger(0);
 
-        FutureListenerHelper<String> subscriber = new FutureListenerHelper<>();
-        subscriber.onSuccess((value) -> {
-            successCounter.incrementAndGet();
-            Assert.assertEquals(expected, value);
-        });
-        subscriber.onError((e) -> Assert.fail());
+        FutureListenerHelper<String> subscriber = new FutureListenerHelper<>(
+                (value) -> {
+                    successCounter.incrementAndGet();
+                    Assert.assertEquals(expected, value);
+                },
+                (e) -> Assert.fail());
 
         subscriber.futureDone(new StringFutureMock(expected));
 
@@ -49,13 +49,13 @@ public class TestFutureListenerSubscriber {
         final InterruptedException expected = new InterruptedException("expected");
         final AtomicInteger errorCounter = new AtomicInteger(0);
 
-        FutureListenerHelper<String> subscriber = new FutureListenerHelper<>();
-        subscriber.onSuccess((value) -> Assert.fail());
-        subscriber.onError((value) -> {
-            errorCounter.incrementAndGet();
+        FutureListenerHelper<String> subscriber = new FutureListenerHelper<>(
+                (value) -> Assert.fail(),
+                (e) -> {
+                    errorCounter.incrementAndGet();
 
-            Assert.assertEquals(expected, value);
-        });
+                    Assert.assertEquals(expected, e);
+                });
 
         subscriber.futureDone(new ExceptionFutureMock(expected));
         Assert.assertEquals(1, errorCounter.get());
@@ -65,9 +65,9 @@ public class TestFutureListenerSubscriber {
     public void testIsNotDone() {
         final AtomicInteger errorCounter = new AtomicInteger(0);
 
-        FutureListenerHelper<String> subscriber = new FutureListenerHelper<>();
-        subscriber.onSuccess((value) -> Assert.fail());
-        subscriber.onError((value) -> errorCounter.incrementAndGet());
+        FutureListenerHelper<String> subscriber = new FutureListenerHelper<>(
+                (value) -> Assert.fail(),
+                (e) -> errorCounter.incrementAndGet());
 
         subscriber.futureDone(new IsNotDoneFutureMock("value"));
         Assert.assertEquals(1, errorCounter.get());

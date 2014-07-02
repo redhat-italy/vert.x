@@ -18,18 +18,25 @@ package org.vertx.java.spi.cluster.impl.infinispan.helpers;
 
 import org.infinispan.commons.util.concurrent.FutureListener;
 import org.vertx.java.spi.cluster.impl.infinispan.callback.Callback;
-import org.vertx.java.spi.cluster.impl.infinispan.callback.UndefinedCallback;
 
 import java.util.concurrent.Future;
 
 public class FutureListenerHelper<T> implements FutureListener<T> {
 
-    private Callback<Exception> onError = UndefinedCallback.instance;
-    private Callback<T> onSuccess = UndefinedCallback.instance;
+    private Callback<Exception> onError;
+    private Callback<T> onSuccess;
+
+    public FutureListenerHelper(Callback<T> onSuccess, Callback<Exception> onError) {
+        if (onError == null || onSuccess == null) {
+            throw new IllegalArgumentException("Callback onError and OnSuccess must have a value");
+        }
+        this.onSuccess = onSuccess;
+        this.onError = onError;
+    }
 
     @Override
     public void futureDone(Future<T> future) {
-        if(future.isDone()) {
+        if (future.isDone()) {
             try {
                 this.onSuccess.execute(future.get());
             } catch (Exception e) {
@@ -40,13 +47,4 @@ public class FutureListenerHelper<T> implements FutureListener<T> {
         }
     }
 
-    public FutureListenerHelper<T> onError(Callback<Exception> onError) {
-        this.onError = onError;
-        return this;
-    }
-
-    public FutureListenerHelper<T> onSuccess(Callback<T> onSuccess) {
-        this.onSuccess = onSuccess;
-        return this;
-    }
 }
