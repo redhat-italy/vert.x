@@ -23,6 +23,10 @@ import org.vertx.java.spi.cluster.impl.infinispan.async.InfinispanClusterManager
 
 public class InfinispanAsyncClusteredEventbusTest extends ClusteredEventBusTest {
 
+    public InfinispanAsyncClusteredEventbusTest() {
+        disableThreadChecks();
+    }
+
     @Override
     protected ClusterManager getClusterManager() {
         return new InfinispanClusterManagerAsync();

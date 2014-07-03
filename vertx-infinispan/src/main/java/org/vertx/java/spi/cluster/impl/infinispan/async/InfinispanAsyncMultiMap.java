@@ -40,99 +40,55 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
     @Override
     public void get(final K k, final Handler<AsyncResult<ChoosableIterable<V>>> handler) {
-        FutureResultImpl<ChoosableIterable<V>> result = new FutureResultImpl<>();
-
         wrapper
                 .get(k,
-                        (value) -> {
-                            result.setResult(value);
-                            result.complete();
-                            handler.handle(result);
-                        },
-                        (e) -> {
-                            result.setFailure(e);
-                            result.failed();
-                            handler.handle(result);
-                        });
+                        (value) -> handler.handle(new FutureResultImpl<>(value)),
+                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                );
     }
 
     @Override
     public void add(final K k, final V v, final Handler<AsyncResult<Void>> handler) {
-        FutureResultImpl<Void> result = new FutureResultImpl<>();
-
         wrapper
                 .get(k,
                         (value) -> {
                             if (value != null) {
                                 wrapper
                                         .put(k, value.add(v),
-                                                (set) -> {
-                                                    result.setResult(null);
-                                                    result.complete();
-                                                    handler.handle(result);
-                                                },
-                                                (e) -> {
-                                                    result.setFailure(e);
-                                                    result.failed();
-                                                    handler.handle(result);
-                                                });
+                                                (result) -> handler.handle(new FutureResultImpl<>((Void) null)),
+                                                (e) -> handler.handle(new FutureResultImpl<>(e))
+                                        );
                             } else {
-                                result.setResult(null);
-                                result.complete();
-                                handler.handle(result);
+                                handler.handle(new FutureResultImpl<>((Void) null));
                             }
                         },
-                        (e) -> {
-                            result.setFailure(e);
-                            result.failed();
-                            handler.handle(result);
-                        });
+                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                );
     }
 
     @Override
     public void remove(final K k, final V v, final Handler<AsyncResult<Void>> handler) {
-        FutureResultImpl<Void> result = new FutureResultImpl<>();
-
         wrapper
                 .get(k,
                         (value) -> {
                             if (value != null) {
                                 if (value.isEmpty()) {
                                     wrapper.remove(k,
-                                            (set) -> {
-                                                result.setResult(null);
-                                                result.complete();
-                                                handler.handle(result);
-                                            },
-                                            (e) -> {
-                                                result.setFailure(e);
-                                                result.failed();
-                                                handler.handle(result);
-                                            });
+                                            (result) -> handler.handle(new FutureResultImpl<>((Void) null)),
+                                            (e) -> handler.handle(new FutureResultImpl<>(e))
+                                    );
                                 } else {
                                     wrapper.put(k, value.remove(v),
-                                            (set) -> {
-                                                result.setResult(null);
-                                                result.complete();
-                                                handler.handle(result);
-                                            },
-                                            (e) -> {
-                                                result.setFailure(e);
-                                                result.failed();
-                                                handler.handle(result);
-                                            });
+                                            (result) -> handler.handle(new FutureResultImpl<>((Void) null)),
+                                            (e) -> handler.handle(new FutureResultImpl<>(e))
+                                    );
                                 }
                             } else {
-                                result.setResult(null);
-                                result.complete();
-                                handler.handle(result);
+                                handler.handle(new FutureResultImpl<>((Void) null));
                             }
                         },
-                        (e) -> {
-                            result.setFailure(e);
-                            result.failed();
-                            handler.handle(result);
-                        });
+                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                );
     }
 
     @Override
