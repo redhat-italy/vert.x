@@ -34,6 +34,8 @@ import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.RequestOptions;
 import io.vertx.core.impl.VertxInternal;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.impl.LoggerFactory;
 
 import java.util.concurrent.TimeoutException;
 
@@ -42,6 +44,8 @@ import java.util.concurrent.TimeoutException;
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
 public class HttpClientRequestImpl implements HttpClientRequest {
+
+  private static final Logger log = LoggerFactory.getLogger(HttpClientRequestImpl.class);
 
   private final RequestOptions options;
   private final HttpClientImpl client;
@@ -113,7 +117,7 @@ public class HttpClientRequestImpl implements HttpClientRequest {
   }
 
   @Override
-  public HttpClientRequestImpl write(Buffer chunk) {
+  public HttpClientRequestImpl writeBuffer(Buffer chunk) {
     check();
     ByteBuf buf = chunk.getByteBuf();
     write(buf, false);
@@ -121,15 +125,15 @@ public class HttpClientRequestImpl implements HttpClientRequest {
   }
 
   @Override
-  public HttpClientRequestImpl write(String chunk) {
+  public HttpClientRequestImpl writeString(String chunk) {
     check();
-    return write(new Buffer(chunk));
+    return writeBuffer(Buffer.newBuffer(chunk));
   }
 
   @Override
-  public HttpClientRequestImpl write(String chunk, String enc) {
+  public HttpClientRequestImpl writeString(String chunk, String enc) {
     check();
-    return write(new Buffer(chunk, enc));
+    return writeBuffer(Buffer.newBuffer(chunk, enc));
   }
 
   @Override
@@ -195,17 +199,17 @@ public class HttpClientRequestImpl implements HttpClientRequest {
   }
 
   @Override
-  public void end(String chunk) {
-    end(new Buffer(chunk));
+  public void writeStringAndEnd(String chunk) {
+    writeBufferAndEnd(Buffer.newBuffer(chunk));
   }
 
   @Override
-  public void end(String chunk, String enc) {
-    end(new Buffer(chunk, enc));
+  public void writeStringAndEnd(String chunk, String enc) {
+    writeBufferAndEnd(Buffer.newBuffer(chunk, enc));
   }
 
   @Override
-  public void end(Buffer chunk) {
+  public void writeBufferAndEnd(Buffer chunk) {
     check();
     if (!chunked && !contentLengthSet()) {
       headers().set(io.vertx.core.http.HttpHeaders.CONTENT_LENGTH, String.valueOf(chunk.length()));
@@ -282,7 +286,7 @@ public class HttpClientRequestImpl implements HttpClientRequest {
   }
 
   private Handler<Throwable> getExceptionHandler() {
-    return exceptionHandler != null ? exceptionHandler : conn.getContext()::reportException;
+    return exceptionHandler != null ? exceptionHandler : log::error;
   }
 
   private void cancelOutstandingTimeoutTimer() {

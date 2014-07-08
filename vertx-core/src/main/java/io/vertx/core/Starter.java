@@ -90,7 +90,7 @@ public class Starter {
     return munged.toArray(new String[munged.size()]);
   }
 
-  private static <T> AsyncResultHandler<T> createLoggingHandler(final String message, final Handler<AsyncResult<T>> doneHandler) {
+  private static <T> AsyncResultHandler<T> createLoggingHandler(final String message, final Handler<AsyncResult<T>> completionHandler) {
     return res -> {
       if (res.failed()) {
         Throwable cause = res.cause();
@@ -106,8 +106,8 @@ public class Starter {
       } else {
         log.info("Succeeded in " + message);
       }
-      if (doneHandler != null) {
-        doneHandler.handle(res);
+      if (completionHandler != null) {
+        completionHandler.handle(res);
       }
     };
   }
@@ -131,9 +131,9 @@ public class Starter {
           log.info("No cluster-host specified so using address " + clusterHost);
         }
       }
-      vertx = VertxFactory.newVertx(new VertxOptions().setClusterHost(clusterHost).setClusterPort(clusterPort).setClustered(true));
+      vertx = Vertx.newVertx(new VertxOptions().setClusterHost(clusterHost).setClusterPort(clusterPort).setClustered(true));
     } else {
-      vertx = VertxFactory.newVertx();
+      vertx = Vertx.newVertx();
     }
     return vertx;
   }

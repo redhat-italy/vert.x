@@ -19,7 +19,6 @@ package io.vertx.test.core;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.VertxFactory;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
@@ -83,7 +82,7 @@ public class ClusteredEventBusTest extends EventBusTestBase {
       }
       testComplete();
     });
-    reg.doneHandler(ar -> {
+    reg.completionHandler(ar -> {
       assertTrue(ar.succeeded());
       vertices[0].eventBus().send(ADDRESS1, val);
     });
@@ -99,7 +98,7 @@ public class ClusteredEventBusTest extends EventBusTestBase {
       assertEquals(str, msg.body());
       msg.reply(val);
     });
-    reg.doneHandler(ar -> {
+    reg.completionHandler(ar -> {
       assertTrue(ar.succeeded());
       vertices[0].eventBus().send(ADDRESS1, str, (Message<T> reply) -> {
         if (consumer == null) {
@@ -145,9 +144,9 @@ public class ClusteredEventBusTest extends EventBusTestBase {
       }
     }
     Registration reg = vertices[2].eventBus().registerHandler(ADDRESS1, new MyHandler());
-    reg.doneHandler(new MyRegisterHandler());
+    reg.completionHandler(new MyRegisterHandler());
     reg = vertices[1].eventBus().registerHandler(ADDRESS1, new MyHandler());
-    reg.doneHandler(new MyRegisterHandler());
+    reg.completionHandler(new MyRegisterHandler());
     vertices[0].eventBus().publish(ADDRESS1, (T)val);
     await();
   }
@@ -233,7 +232,7 @@ public class ClusteredEventBusTest extends EventBusTestBase {
     class FooCodec implements MessageCodec<Foo> {
       @Override
       public Buffer encode(Foo object) {
-        return new Buffer();
+        return Buffer.newBuffer();
       }
 
       @Override
@@ -267,7 +266,7 @@ public class ClusteredEventBusTest extends EventBusTestBase {
     vertices = new Vertx[numNodes];
     for (int i = 0; i < numNodes; i++) {
       int index = i;
-      VertxFactory.newVertx(new VertxOptions().setClusterHost("localhost").setClusterPort(0).setClustered(true)
+      Vertx.newVertx(new VertxOptions().setClusterHost("localhost").setClusterPort(0).setClustered(true)
                             .setClusterManager(getClusterManager()), ar -> {
         assertTrue("Failed to start node", ar.succeeded());
         vertices[index] = ar.result();

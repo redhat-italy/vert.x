@@ -94,7 +94,7 @@ public abstract class WebSocketImplBase<T> implements WebSocketBase<T> {
 
   protected void writeBinaryFrameInternal(Buffer data) {
     ByteBuf buf = data.getByteBuf();
-    WebSocketFrame frame = new WebSocketFrameImpl(WebSocketFrame.FrameType.BINARY, buf);
+    WebSocketFrame frame = new WebSocketFrameImpl(FrameType.BINARY, buf);
     writeFrame(frame);
   }
 
@@ -125,7 +125,7 @@ public abstract class WebSocketImplBase<T> implements WebSocketBase<T> {
 
   void handleFrame(WebSocketFrameInternal frame) {
     if (dataHandler != null) {
-      Buffer buff = new Buffer(frame.getBinaryData());
+      Buffer buff = Buffer.newBuffer(frame.getBinaryData());
       dataHandler.handle(buff);
     }
 

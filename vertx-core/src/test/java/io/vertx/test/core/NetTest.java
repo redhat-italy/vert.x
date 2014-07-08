@@ -30,6 +30,7 @@ import io.vertx.core.impl.ContextImpl;
 import io.vertx.core.impl.EventLoopContext;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.impl.WorkerContext;
+import io.vertx.core.net.JKSOptions;
 import io.vertx.core.net.NetClient;
 import io.vertx.core.net.NetClientOptions;
 import io.vertx.core.net.NetServer;
@@ -178,25 +179,15 @@ public class NetTest extends VertxTestBase {
     assertEquals(options, options.setSsl(true));
     assertTrue(options.isSsl());
 
-    assertNull(options.getKeyStorePath());
-    String randString = TestUtils.randomAlphaString(100);
-    assertEquals(options, options.setKeyStorePath(randString));
-    assertEquals(randString, options.getKeyStorePath());
+    assertNull(options.getKeyStore());
+    JKSOptions keyStoreOptions = new JKSOptions().setPath(TestUtils.randomAlphaString(100)).setPassword(TestUtils.randomAlphaString(100));
+    assertEquals(options, options.setKeyStore(keyStoreOptions));
+    assertEquals(keyStoreOptions, options.getKeyStore());
 
-    assertNull(options.getKeyStorePassword());
-    randString = TestUtils.randomAlphaString(100);
-    assertEquals(options, options.setKeyStorePassword(randString));
-    assertEquals(randString, options.getKeyStorePassword());
-
-    assertNull(options.getTrustStorePath());
-    randString = TestUtils.randomAlphaString(100);
-    assertEquals(options, options.setTrustStorePath(randString));
-    assertEquals(randString, options.getTrustStorePath());
-
-    assertNull(options.getTrustStorePassword());
-    randString = TestUtils.randomAlphaString(100);
-    assertEquals(options, options.setTrustStorePassword(randString));
-    assertEquals(randString, options.getTrustStorePassword());
+    assertNull(options.getTrustStore());
+    JKSOptions trustStoreOptions = new JKSOptions().setPath(TestUtils.randomAlphaString(100)).setPassword(TestUtils.randomAlphaString(100));
+    assertEquals(options, options.setTrustStore(trustStoreOptions));
+    assertEquals(trustStoreOptions, options.getTrustStore());
 
     assertFalse(options.isTrustAll());
     assertEquals(options, options.setTrustAll(true));
@@ -310,25 +301,15 @@ public class NetTest extends VertxTestBase {
     assertEquals(options, options.setSsl(true));
     assertTrue(options.isSsl());
 
-    assertNull(options.getKeyStorePath());
-    String randString = TestUtils.randomAlphaString(100);
-    assertEquals(options, options.setKeyStorePath(randString));
-    assertEquals(randString, options.getKeyStorePath());
+    assertNull(options.getKeyStore());
+    JKSOptions keyStoreOptions = new JKSOptions().setPath(TestUtils.randomAlphaString(100)).setPassword(TestUtils.randomAlphaString(100));
+    assertEquals(options, options.setKeyStore(keyStoreOptions));
+    assertEquals(keyStoreOptions, options.getKeyStore());
 
-    assertNull(options.getKeyStorePassword());
-    randString = TestUtils.randomAlphaString(100);
-    assertEquals(options, options.setKeyStorePassword(randString));
-    assertEquals(randString, options.getKeyStorePassword());
-
-    assertNull(options.getTrustStorePath());
-    randString = TestUtils.randomAlphaString(100);
-    assertEquals(options, options.setTrustStorePath(randString));
-    assertEquals(randString, options.getTrustStorePath());
-
-    assertNull(options.getTrustStorePassword());
-    randString = TestUtils.randomAlphaString(100);
-    assertEquals(options, options.setTrustStorePassword(randString));
-    assertEquals(randString, options.getTrustStorePassword());
+    assertNull(options.getTrustStore());
+    JKSOptions trustStoreOptions = new JKSOptions().setPath(TestUtils.randomAlphaString(100)).setPassword(TestUtils.randomAlphaString(100));
+    assertEquals(options, options.setTrustStore(trustStoreOptions));
+    assertEquals(trustStoreOptions, options.getTrustStore());
 
     assertEquals(1024, options.getAcceptBacklog());
     rand = TestUtils.randomPositiveInt();
@@ -352,7 +333,7 @@ public class NetTest extends VertxTestBase {
     }
 
     assertEquals("0.0.0.0", options.getHost());
-    randString = TestUtils.randomUnicodeString(100);
+    String randString = TestUtils.randomUnicodeString(100);
     assertEquals(options, options.setHost(randString));
     assertEquals(randString, options.getHost());
 
@@ -369,14 +350,14 @@ public class NetTest extends VertxTestBase {
   @Test
   public void testEchoBytes() {
     Buffer sent = TestUtils.randomBuffer(100);
-    testEcho(sock -> sock.write(sent), buff -> TestUtils.buffersEqual(sent, buff), sent.length());
+    testEcho(sock -> sock.writeBuffer(sent), buff -> TestUtils.buffersEqual(sent, buff), sent.length());
   }
 
   @Test
   public void testEchoString() {
     String sent = TestUtils.randomUnicodeString(100);
-    Buffer buffSent = new Buffer(sent);
-    testEcho(sock -> sock.write(sent), buff -> TestUtils.buffersEqual(buffSent, buff), buffSent.length());
+    Buffer buffSent = Buffer.newBuffer(sent);
+    testEcho(sock -> sock.writeString(sent), buff -> TestUtils.buffersEqual(buffSent, buff), buffSent.length());
   }
 
   @Test
@@ -391,15 +372,15 @@ public class NetTest extends VertxTestBase {
 
   void testEchoStringWithEncoding(String encoding) {
     String sent = TestUtils.randomUnicodeString(100);
-    Buffer buffSent = new Buffer(sent, encoding);
-    testEcho(sock -> sock.write(sent, encoding), buff -> TestUtils.buffersEqual(buffSent, buff), buffSent.length());
+    Buffer buffSent = Buffer.newBuffer(sent, encoding);
+    testEcho(sock -> sock.writeString(sent, encoding), buff -> TestUtils.buffersEqual(buffSent, buff), buffSent.length());
   }
 
   void testEcho(Consumer<NetSocket> writer, Consumer<Buffer> dataChecker, int length) {
     Handler<AsyncResult<NetSocket>> clientHandler = (asyncResult) -> {
       if (asyncResult.succeeded()) {
         NetSocket sock = asyncResult.result();
-        Buffer buff = new Buffer();
+        Buffer buff = Buffer.newBuffer();
         sock.dataHandler((buffer) -> {
           buff.appendBuffer(buffer);
           if (buff.length() == length) {
@@ -420,13 +401,8 @@ public class NetTest extends VertxTestBase {
   }
 
   void startEchoServer(Handler<AsyncResult<NetServer>> listenHandler) {
-    Handler<NetSocket> serverHandler = socket -> socket.dataHandler(socket::write);
+    Handler<NetSocket> serverHandler = socket -> socket.dataHandler(socket::writeBuffer);
     server.connectHandler(serverHandler).listen(listenHandler);
-  }
-
-  @Test
-  public void testConnectDefaultHost() {
-    connect(1234, null);
   }
 
   @Test
@@ -447,11 +423,7 @@ public class NetTest extends VertxTestBase {
             }
           }
         };
-        if (host == null) {
-          client.connect(port, handler);
-        } else {
-          client.connect(port, host, handler);
-        }
+        client.connect(port, host, handler);
       }
     });
     await();
@@ -459,7 +431,7 @@ public class NetTest extends VertxTestBase {
 
   @Test
   public void testConnectInvalidPort() {
-    client.connect(9998, res -> {
+    client.connect(9998, "localhost", res -> {
       assertTrue(res.failed());
       assertFalse(res.succeeded());
       assertNotNull(res.cause());
@@ -536,7 +508,7 @@ public class NetTest extends VertxTestBase {
   }
 
   void clientCloseHandlers(boolean closeFromClient) {
-    client.connect(1234, ar -> {
+    client.connect(1234, "localhost", ar -> {
       AtomicInteger counter = new AtomicInteger(0);
       ar.result().endHandler(v -> assertEquals(1, counter.incrementAndGet()));
       ar.result().closeHandler(v -> {
@@ -551,13 +523,13 @@ public class NetTest extends VertxTestBase {
 
   @Test
   public void testServerCloseHandlersCloseFromClient() {
-    serverCloseHandlers(false, s -> client.connect(1234, ar -> ar.result().close()));
+    serverCloseHandlers(false, s -> client.connect(1234, "localhost", ar -> ar.result().close()));
     await();
   }
 
   @Test
   public void testServerCloseHandlersCloseFromServer() {
-    serverCloseHandlers(true, s -> client.connect(1234, ar -> {
+    serverCloseHandlers(true, s -> client.connect(1234, "localhost", ar -> {
     }));
     await();
   }
@@ -579,13 +551,13 @@ public class NetTest extends VertxTestBase {
   @Test
   public void testClientDrainHandler() {
     pausingServer((s) -> {
-      client.connect(1234, ar -> {
+      client.connect(1234, "localhost", ar -> {
         NetSocket sock = ar.result();
         assertFalse(sock.writeQueueFull());
         sock.setWriteQueueMaxSize(1000);
         Buffer buff = TestUtils.randomBuffer(10000);
         vertx.setPeriodic(1, id -> {
-          sock.write(buff.copy());
+          sock.writeBuffer(buff.copy());
           if (sock.writeQueueFull()) {
             vertx.cancelTimer(id);
             sock.drainHandler(v -> {
@@ -613,7 +585,7 @@ public class NetTest extends VertxTestBase {
   @Test
   public void testServerDrainHandler() {
     drainingServer(s -> {
-      client.connect(1234, ar -> {
+      client.connect(1234, "localhost", ar -> {
         NetSocket sock = ar.result();
         sock.pause();
         setHandlers(sock);
@@ -638,7 +610,7 @@ public class NetTest extends VertxTestBase {
       Buffer buff = TestUtils.randomBuffer(10000);
       //Send data until the buffer is full
       vertx.setPeriodic(1, id -> {
-        sock.write(buff.copy());
+        sock.writeBuffer(buff.copy());
         if (sock.writeQueueFull()) {
           vertx.cancelTimer(id);
           sock.drainHandler(v -> {
@@ -669,7 +641,7 @@ public class NetTest extends VertxTestBase {
     client = vertx.createNetClient(new NetClientOptions().setReconnectAttempts(attempts).setReconnectInterval(10));
 
     //The server delays starting for a a few seconds, but it should still connect
-    client.connect(1234, (res) -> {
+    client.connect(1234, "localhost", (res) -> {
       assertTrue(res.succeeded());
       assertFalse(res.failed());
       testComplete();
@@ -687,7 +659,7 @@ public class NetTest extends VertxTestBase {
     client.close();
     client = vertx.createNetClient(new NetClientOptions().setReconnectAttempts(100).setReconnectInterval(10));
 
-    client.connect(1234, (res) -> {
+    client.connect(1234, "localhost", (res) -> {
       assertFalse(res.succeeded());
       assertTrue(res.failed());
       testComplete();
@@ -761,10 +733,10 @@ public class NetTest extends VertxTestBase {
       options.setSsl(true);
     }
     if (serverTrust) {
-      options.setTrustStorePath(findFileOnClasspath("tls/server-truststore.jks")).setTrustStorePassword("wibble");
+      options.setTrustStore(new JKSOptions().setPath(findFileOnClasspath("tls/server-truststore.jks")).setPassword("wibble"));
     }
     if (serverCert) {
-      options.setKeyStorePath(findFileOnClasspath("tls/server-keystore.jks")).setKeyStorePassword("wibble");
+      options.setKeyStore(new JKSOptions().setPath(findFileOnClasspath("tls/server-keystore.jks")).setPassword("wibble"));
     }
     if (requireClientAuth) {
       options.setClientAuthRequired(true);
@@ -778,7 +750,7 @@ public class NetTest extends VertxTestBase {
     Handler<NetSocket> serverHandler = socket -> {
       AtomicBoolean upgradedServer = new AtomicBoolean();
       socket.dataHandler(buff -> {
-        socket.write(buff); // echo the data
+        socket.writeBuffer(buff); // echo the data
         if (startTLS && !upgradedServer.get()) {
           assertFalse(socket.isSsl());
           socket.ssl(v -> assertTrue(socket.isSsl()));
@@ -797,17 +769,17 @@ public class NetTest extends VertxTestBase {
           clientOptions.setTrustAll(true);
         }
         if (clientTrust) {
-          clientOptions.setTrustStorePath(findFileOnClasspath("tls/client-truststore.jks")).setTrustStorePassword("wibble");
+          clientOptions.setTrustStore(new JKSOptions().setPath(findFileOnClasspath("tls/client-truststore.jks")).setPassword("wibble"));
         }
         if (clientCert) {
-          clientOptions.setKeyStorePath(findFileOnClasspath("tls/client-keystore.jks")).setKeyStorePassword("wibble");
+          clientOptions.setKeyStore(new JKSOptions().setPath(findFileOnClasspath("tls/client-keystore.jks")).setPassword("wibble"));
         }
         for (String suite: enabledCipherSuites) {
           clientOptions.addEnabledCipherSuite(suite);
         }
       }
       client = vertx.createNetClient(clientOptions);
-      client.connect(4043, ar2 -> {
+      client.connect(4043, "localhost", ar2 -> {
         if (ar2.succeeded()) {
           if (!shouldPass) {
             fail("Should not connect");
@@ -815,8 +787,8 @@ public class NetTest extends VertxTestBase {
           }
           final int numChunks = 100;
           final int chunkSize = 100;
-          final Buffer received = new Buffer();
-          final Buffer sent = new Buffer();
+          final Buffer received = Buffer.newBuffer();
+          final Buffer sent = Buffer.newBuffer();
           final NetSocket socket = ar2.result();
 
           final AtomicBoolean upgradedClient = new AtomicBoolean();
@@ -860,7 +832,7 @@ public class NetTest extends VertxTestBase {
   void sendBuffer(NetSocket socket, Buffer sent, int chunkSize) {
     Buffer buff = TestUtils.randomBuffer(chunkSize);
     sent.appendBuffer(buff);
-    socket.write(buff);
+    socket.writeBuffer(buff);
   }
 
   @Test
@@ -1011,7 +983,7 @@ public class NetTest extends VertxTestBase {
     CountDownLatch connectLatch = new CountDownLatch(numConnections);
     CountDownLatch receivedLatch = new CountDownLatch(numConnections);
     for (int i = 0; i < numConnections; i++) {
-      client.connect(1234, res -> {
+      client.connect(1234, "localhost", res -> {
         connectLatch.countDown();
         res.result().dataHandler(data -> {
           receivedLatch.countDown();
@@ -1021,8 +993,8 @@ public class NetTest extends VertxTestBase {
     assertTrue(connectLatch.await(10, TimeUnit.SECONDS));
 
     // Send some data
-    client.connect(1234, res -> {
-      res.result().write("foo");
+    client.connect(1234, "localhost", res -> {
+      res.result().writeString("foo");
     });
     assertTrue(receivedLatch.await(10, TimeUnit.SECONDS));
 
@@ -1033,14 +1005,14 @@ public class NetTest extends VertxTestBase {
   public void testRemoteAddress() throws Exception {
     server.connectHandler(socket -> {
       SocketAddress addr = socket.remoteAddress();
-      assertEquals("127.0.0.1", addr.getHostAddress());
+      assertEquals("127.0.0.1", addr.hostAddress());
     }).listen(ar -> {
       assertTrue(ar.succeeded());
-      vertx.createNetClient(new NetClientOptions()).connect(1234, result -> {
+      vertx.createNetClient(new NetClientOptions()).connect(1234, "localhost", result -> {
         NetSocket socket = result.result();
         SocketAddress addr = socket.remoteAddress();
-        assertEquals("127.0.0.1", addr.getHostAddress());
-        assertEquals(addr.getPort(), 1234);
+        assertEquals("127.0.0.1", addr.hostAddress());
+        assertEquals(addr.hostPort(), 1234);
         testComplete();
       });
     });
@@ -1050,7 +1022,7 @@ public class NetTest extends VertxTestBase {
   @Test
   public void testWriteSameBufferMoreThanOnce() throws Exception {
     server.connectHandler(socket -> {
-      Buffer received = new Buffer();
+      Buffer received = Buffer.newBuffer();
       socket.dataHandler(buff -> {
         received.appendBuffer(buff);
         if (received.toString().equals("foofoo")) {
@@ -1059,11 +1031,11 @@ public class NetTest extends VertxTestBase {
       });
     }).listen(ar -> {
       assertTrue(ar.succeeded());
-      client.connect(1234, result -> {
+      client.connect(1234, "localhost", result -> {
         NetSocket socket = result.result();
-        Buffer buff = new Buffer("foo");
-        socket.write(buff);
-        socket.write(buff);
+        Buffer buff = Buffer.newBuffer("foo");
+        socket.writeBuffer(buff);
+        socket.writeBuffer(buff);
       });
     });
     await();
@@ -1074,8 +1046,8 @@ public class NetTest extends VertxTestBase {
     File fDir = Files.createTempDirectory("vertx-test").toFile();
     String content = TestUtils.randomUnicodeString(10000);
     File file = setupFile(fDir.toString(), "some-file.txt", content);
-    Buffer expected = new Buffer(content);
-    Buffer received = new Buffer();
+    Buffer expected = Buffer.newBuffer(content);
+    Buffer received = Buffer.newBuffer();
     server.connectHandler(sock -> {
       sock.dataHandler(buff -> {
         received.appendBuffer(buff);
@@ -1085,11 +1057,11 @@ public class NetTest extends VertxTestBase {
         }
       });
       // Send some data to the client to trigger the sendfile
-      sock.write("foo");
+      sock.writeString("foo");
     });
     server.listen(ar -> {
       assertTrue(ar.succeeded());
-      client.connect(1234, ar2 -> {
+      client.connect(1234, "localhost", ar2 -> {
         assertTrue(ar2.succeeded());
         NetSocket sock = ar2.result();
         sock.dataHandler(buf -> {
@@ -1106,8 +1078,8 @@ public class NetTest extends VertxTestBase {
     File fDir = Files.createTempDirectory("vertx-test").toFile();
     String content = TestUtils.randomUnicodeString(10000);
     File file = setupFile(fDir.toString(), "some-file.txt", content);
-    Buffer expected = new Buffer(content);
-    Buffer received = new Buffer();
+    Buffer expected = Buffer.newBuffer(content);
+    Buffer received = Buffer.newBuffer();
     server.connectHandler(sock -> {
       sock.dataHandler(buf -> {
         sock.sendFile(file.getAbsolutePath());
@@ -1115,7 +1087,7 @@ public class NetTest extends VertxTestBase {
     });
     server.listen(ar -> {
       assertTrue(ar.succeeded());
-      client.connect(1234, ar2 -> {
+      client.connect(1234, "localhost", ar2 -> {
         assertTrue(ar2.succeeded());
         NetSocket sock = ar2.result();
         sock.dataHandler(buff -> {
@@ -1125,7 +1097,7 @@ public class NetTest extends VertxTestBase {
             testComplete();
           }
         });
-        sock.write("foo");
+        sock.writeString("foo");
       });
     });
 
@@ -1138,10 +1110,10 @@ public class NetTest extends VertxTestBase {
     fDir.deleteOnExit();
     server.connectHandler(socket -> {
       SocketAddress addr = socket.remoteAddress();
-      assertEquals("127.0.0.1", addr.getHostAddress());
+      assertEquals("127.0.0.1", addr.hostAddress());
     }).listen(ar -> {
       assertTrue(ar.succeeded());
-      client.connect(1234, result -> {
+      client.connect(1234, "localhost", result -> {
         assertTrue(result.succeeded());
         NetSocket socket = result.result();
         try {
@@ -1168,7 +1140,7 @@ public class NetTest extends VertxTestBase {
     });
     server.listen(ar -> {
       assertTrue(ar.succeeded());
-      client.connect(1234, ar2 -> {
+      client.connect(1234, "localhost", ar2 -> {
         assertTrue(ar2.succeeded());
       });
     });
@@ -1187,7 +1159,7 @@ public class NetTest extends VertxTestBase {
     });
     server.listen(ar -> {
       assertTrue(ar.succeeded());
-      client.connect(1234, ar2 -> {
+      client.connect(1234, "localhost", ar2 -> {
         assertTrue(ar2.succeeded());
       });
     });
@@ -1290,7 +1262,7 @@ public class NetTest extends VertxTestBase {
   public void testAttemptConnectAfterClose() {
     client.close();
     try {
-      client.connect(1234, ar -> {
+      client.connect(1234, "localhost", ar -> {
       });
       fail("Should throw exception");
     } catch (IllegalStateException e) {
@@ -1304,18 +1276,18 @@ public class NetTest extends VertxTestBase {
     Thread[] threads = new Thread[numThreads];
     CountDownLatch latch = new CountDownLatch(numThreads);
     server.connectHandler(socket -> {
-      socket.dataHandler(socket::write);
+      socket.dataHandler(socket::writeBuffer);
     }).listen(ar -> {
       assertTrue(ar.succeeded());
       for (int i = 0; i < numThreads; i++) {
         threads[i] = new Thread() {
           public void run() {
-            client.connect(1234, result -> {
+            client.connect(1234, "localhost", result -> {
               assertTrue(result.succeeded());
               Buffer buff = TestUtils.randomBuffer(100000);
               NetSocket sock = result.result();
-              sock.write(buff);
-              Buffer received = new Buffer();
+              sock.writeBuffer(buff);
+              Buffer received = Buffer.newBuffer();
               sock.dataHandler(rec -> {
                 received.appendBuffer(rec);
                 if (received.length() == buff.length()) {
@@ -1361,7 +1333,7 @@ public class NetTest extends VertxTestBase {
         Thread thr = Thread.currentThread();
         server = vertx.createNetServer(new NetServerOptions().setPort(1234));
         server.connectHandler(sock -> {
-          sock.dataHandler(sock::write);
+          sock.dataHandler(sock::writeBuffer);
           assertSame(ctx, vertx.currentContext());
           if (!worker) {
             assertSame(thr, Thread.currentThread());
@@ -1374,7 +1346,7 @@ public class NetTest extends VertxTestBase {
             assertSame(thr, Thread.currentThread());
           }
           client = vertx.createNetClient(new NetClientOptions());
-          client.connect(1234, ar2 -> {
+          client.connect(1234, "localhost", ar2 -> {
             assertSame(ctx, vertx.currentContext());
             if (!worker) {
               assertSame(thr, Thread.currentThread());
@@ -1382,8 +1354,8 @@ public class NetTest extends VertxTestBase {
             assertTrue(ar2.succeeded());
             NetSocket sock = ar2.result();
             Buffer buff = TestUtils.randomBuffer(10000);
-            sock.write(buff);
-            Buffer brec = new Buffer();
+            sock.writeBuffer(buff);
+            Buffer brec = Buffer.newBuffer();
             sock.dataHandler(rec -> {
               assertSame(ctx, vertx.currentContext());
               if (!worker) {
@@ -1399,7 +1371,7 @@ public class NetTest extends VertxTestBase {
       }
     }
     MyVerticle verticle = new MyVerticle();
-    vertx.deployVerticle(verticle, new DeploymentOptions().setWorker(worker));
+    vertx.deployVerticleInstance(verticle, new DeploymentOptions().setWorker(worker));
     await();
   }
 
@@ -1424,7 +1396,7 @@ public class NetTest extends VertxTestBase {
       }
     }
     MyVerticle verticle = new MyVerticle();
-    vertx.deployVerticle(verticle, new DeploymentOptions().setWorker(true).setMultiThreaded(true));
+    vertx.deployVerticleInstance(verticle, new DeploymentOptions().setWorker(true).setMultiThreaded(true));
     await();
   }
 
@@ -1435,7 +1407,7 @@ public class NetTest extends VertxTestBase {
     AtomicReference<ContextImpl> serverConnectContext = new AtomicReference<>();
     // Server connect handler should always be called with same context
     server.connectHandler(sock -> {
-      sock.dataHandler(sock::write);
+      sock.dataHandler(sock::writeBuffer);
       ContextImpl serverContext = ((VertxInternal) vertx).getContext();
       if (serverConnectContext.get() != null) {
         assertSame(serverConnectContext.get(), serverContext);
@@ -1455,7 +1427,7 @@ public class NetTest extends VertxTestBase {
     int numConns = 10;
     // Each connect should be in its own context
     for (int i = 0; i < numConns; i++) {
-      client.connect(1234, conn -> {
+      client.connect(1234, "localhost", conn -> {
         contexts.add(((VertxInternal) vertx).getContext());
         if (cnt.incrementAndGet() == numConns) {
           assertEquals(numConns, contexts.size());

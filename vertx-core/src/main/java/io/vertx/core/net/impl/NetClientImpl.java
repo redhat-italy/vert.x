@@ -63,10 +63,10 @@ public class NetClientImpl implements NetClient {
   public NetClientImpl(VertxInternal vertx, NetClientOptions options) {
     this.vertx = vertx;
     this.options = new NetClientOptions(options);
-    this.sslHelper = new SSLHelper(options);
-    this.closeHook = doneHandler -> {
+    this.sslHelper = new SSLHelper(options, KeyStoreHelper.create(vertx, options.getKeyStore()), KeyStoreHelper.create(vertx, options.getTrustStore()));
+    this.closeHook = completionHandler -> {
       NetClientImpl.this.close();
-      doneHandler.handle(new FutureResultImpl<>((Void)null));
+      completionHandler.handle(new FutureResultImpl<>((Void)null));
     };
     creatingContext = vertx.getContext();
     if (creatingContext != null) {
@@ -81,13 +81,6 @@ public class NetClientImpl implements NetClient {
   public NetClient connect(int port, String host, final Handler<AsyncResult<NetSocket>> connectHandler) {
     checkClosed();
     connect(port, host, connectHandler, options.getReconnectAttempts());
-    return this;
-  }
-
-  @Override
-  public NetClient connect(int port, final Handler<AsyncResult<NetSocket>> connectCallback) {
-    checkClosed();
-    connect(port, "localhost", connectCallback);
     return this;
   }
 

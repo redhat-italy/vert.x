@@ -43,14 +43,16 @@ import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.RequestOptions;
 import io.vertx.core.http.WebSocket;
 import io.vertx.core.http.WebSocketConnectOptions;
-import io.vertx.core.http.WebSocketFrame;
 import io.vertx.core.http.impl.ws.WebSocketFrameImpl;
 import io.vertx.core.http.impl.ws.WebSocketFrameInternal;
 import io.vertx.core.impl.Closeable;
 import io.vertx.core.impl.ContextImpl;
 import io.vertx.core.impl.FutureResultImpl;
 import io.vertx.core.impl.VertxInternal;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.net.NetSocket;
+import io.vertx.core.net.impl.KeyStoreHelper;
 import io.vertx.core.net.impl.PartialPooledByteBufAllocator;
 import io.vertx.core.net.impl.SSLHelper;
 
@@ -63,6 +65,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class HttpClientImpl implements HttpClient {
+
+  private static final Logger log = LoggerFactory.getLogger(HttpClientImpl.class);
+
 
   private final VertxInternal vertx;
   private final HttpClientOptions options;
@@ -77,11 +82,11 @@ public class HttpClientImpl implements HttpClient {
   public HttpClientImpl(VertxInternal vertx, HttpClientOptions options) {
     this.vertx = vertx;
     this.options = new HttpClientOptions(options);
-    this.sslHelper = new SSLHelper(options);
+    this.sslHelper = new SSLHelper(options, KeyStoreHelper.create(vertx, options.getKeyStore()), KeyStoreHelper.create(vertx, options.getTrustStore()));
     this.creatingContext = vertx.getContext();
-    closeHook = doneHandler -> {
+    closeHook = completionHandler -> {
       HttpClientImpl.this.close();
-      doneHandler.handle(new FutureResultImpl<>((Void)null));
+      completionHandler.handle(new FutureResultImpl<>((Void)null));
     };
     if (creatingContext != null) {
       if (creatingContext.isMultithreaded()) {
@@ -208,7 +213,7 @@ public class HttpClientImpl implements HttpClient {
     if (exceptionHandler != null) {
       exceptionHandler.handle(e);
     } else {
-      vertx.reportException(e);
+      log.error(e);
     }
   }
 
@@ -307,7 +312,7 @@ public class HttpClientImpl implements HttpClient {
     checkClosed();
     HttpClientRequest req = new HttpClientRequestImpl(this, method, options, responseHandler, vertx);
     if (options.getHeaders() != null) {
-      req.headers().set(options.getHeaders());
+      req.headers().setAll(options.getHeaders());
     }
     return req;
   }
@@ -340,7 +345,7 @@ public class HttpClientImpl implements HttpClient {
     // If no specific exception handler is provided, fall back to the HttpClient's exception handler.
     // If that doesn't exist just log it
     Handler<Throwable> exHandler =
-      connectionExceptionHandler == null ? (exceptionHandler == null ? context::reportException : exceptionHandler ): connectionExceptionHandler;
+      connectionExceptionHandler == null ? (exceptionHandler == null ? log::error : exceptionHandler ): connectionExceptionHandler;
 
     context.execute(() -> {
       listener.connectionClosed(null);
@@ -351,7 +356,7 @@ public class HttpClientImpl implements HttpClient {
       if (exHandler != null) {
         exHandler.handle(t);
       } else {
-        context.reportException(t);
+        log.error(t);
       }
     }, true);
   }
@@ -474,7 +479,7 @@ public class HttpClientImpl implements HttpClient {
       if (msg instanceof HttpContent) {
         HttpContent chunk = (HttpContent) msg;
         if (chunk.content().isReadable()) {
-          Buffer buff = new Buffer(chunk.content().slice());
+          Buffer buff = Buffer.newBuffer(chunk.content().slice());
           conn.handleResponseChunk(buff);
         }
         if (chunk instanceof LastHttpContent) {
@@ -491,7 +496,7 @@ public class HttpClientImpl implements HttpClient {
             break;
           case PING:
             // Echo back the content of the PING frame as PONG frame as specified in RFC 6455 Section 5.5.2
-            ctx.writeAndFlush(new WebSocketFrameImpl(WebSocketFrame.FrameType.PONG, frame.getBinaryData()));
+            ctx.writeAndFlush(new WebSocketFrameImpl(FrameType.PONG, frame.getBinaryData()));
             break;
           case CLOSE:
             if (!closeFrameSent) {

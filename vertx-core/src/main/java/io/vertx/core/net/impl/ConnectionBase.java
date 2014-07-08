@@ -29,6 +29,8 @@ import io.vertx.core.Handler;
 import io.vertx.core.impl.ContextImpl;
 import io.vertx.core.impl.FutureResultImpl;
 import io.vertx.core.impl.VertxInternal;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.net.SocketAddress;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -44,6 +46,8 @@ import java.net.InetSocketAddress;
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
 public abstract class ConnectionBase {
+
+  private static final Logger log = LoggerFactory.getLogger(ConnectionBase.class);
 
   protected ConnectionBase(VertxInternal vertx, Channel channel, ContextImpl context) {
     this.vertx = vertx;
@@ -137,29 +141,25 @@ public abstract class ConnectionBase {
     if (exceptionHandler != null) {
       context.execute(() -> exceptionHandler.handle(t), false);
     } else {
-      context.reportException(t);
+      log.error(t);
     }
   }
 
   protected void handleClosed() {
     if (closeHandler != null) {
-      try {
-        closeHandler.handle(null);
-      } catch (Throwable t) {
-        handleHandlerException(t);
-      }
+      closeHandler.handle(null);
     }
   }
 
-  protected void addFuture(final Handler<AsyncResult<Void>> doneHandler, final ChannelFuture future) {
+  protected void addFuture(final Handler<AsyncResult<Void>> completionHandler, final ChannelFuture future) {
     if (future != null) {
       future.addListener(channelFuture -> {
-        if (doneHandler != null) {
+        if (completionHandler != null) {
           context.execute(() -> {
             if (channelFuture.isSuccess()) {
-              doneHandler.handle(new FutureResultImpl<>((Void)null));
+              completionHandler.handle(new FutureResultImpl<>((Void)null));
             } else {
-              doneHandler.handle(new FutureResultImpl<>(channelFuture.cause()));
+              completionHandler.handle(new FutureResultImpl<>(channelFuture.cause()));
             }
           }, true);
         } else if (!channelFuture.isSuccess()) {
@@ -167,10 +167,6 @@ public abstract class ConnectionBase {
         }
       });
     }
-  }
-
-  protected void handleHandlerException(Throwable t) {
-    vertx.reportException(t);
   }
 
   protected boolean supportsFileRegion() {
@@ -223,12 +219,12 @@ public abstract class ConnectionBase {
 
   public SocketAddress remoteAddress() {
     InetSocketAddress addr = (InetSocketAddress)channel.remoteAddress();
-    return new SocketAddress(addr.getPort(), addr.getAddress().getHostAddress());
+    return new SocketAddressImpl(addr.getPort(), addr.getAddress().getHostAddress());
   }
 
   public SocketAddress localAddress() {
     InetSocketAddress addr = (InetSocketAddress)channel.localAddress();
-    return new SocketAddress(addr.getPort(), addr.getAddress().getHostAddress());
+    return new SocketAddressImpl(addr.getPort(), addr.getAddress().getHostAddress());
   }
 
 

@@ -18,6 +18,9 @@ package io.vertx.core.http;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.core.gen.Fluent;
+import io.vertx.core.gen.GenIgnore;
+import io.vertx.core.gen.VertxGen;
 
 /**
  * An HTTP and WebSockets server<p>
@@ -30,6 +33,7 @@ import io.vertx.core.Handler;
  *
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
+@VertxGen
 public interface HttpServer {
 
   /**
@@ -38,12 +42,14 @@ public interface HttpServer {
    *
    * @return a reference to this, so methods can be chained.
    */
+  @Fluent
   HttpServer requestHandler(Handler<HttpServerRequest> requestHandler);
 
   /**
    * Get the request handler
    * @return The request handler
    */
+  @GenIgnore
   Handler<HttpServerRequest> requestHandler();
 
   /**
@@ -58,11 +64,13 @@ public interface HttpServer {
    * Get the websocket handler
    * @return The websocket handler
    */
+  @GenIgnore
   Handler<ServerWebSocket> websocketHandler();
 
-
+  @Fluent
   HttpServer listen();
 
+  @Fluent
   HttpServer listen(Handler<AsyncResult<HttpServer>> listenHandler);
   
   /**
@@ -71,9 +79,9 @@ public interface HttpServer {
   void close();
 
   /**
-   * Close the server. Any open HTTP connections will be closed. The {@code doneHandler} will be called when the close
+   * Close the server. Any open HTTP connections will be closed. The {@code completionHandler} will be called when the close
    * is complete.
    */
-  void close(Handler<AsyncResult<Void>> doneHandler);
+  void close(Handler<AsyncResult<Void>> completionHandler);
 
 }

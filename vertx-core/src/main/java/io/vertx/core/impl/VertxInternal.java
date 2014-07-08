@@ -37,11 +37,9 @@ public interface VertxInternal extends VertxSPI {
 
   EventLoopGroup getEventLoopGroup();
 
-  ExecutorService getBackgroundPool();
+  ExecutorService getWorkerPool();
 
   ContextImpl getOrCreateContext();
-
-  void reportException(Throwable t);
 
   Map<ServerID, HttpServerImpl> sharedHttpServers();
 

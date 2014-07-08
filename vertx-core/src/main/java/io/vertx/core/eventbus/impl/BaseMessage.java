@@ -66,23 +66,13 @@ public abstract class BaseMessage<T> implements Message<T> {
   }
 
   @Override
-  public void reply() {
-    sendReply(bus.createMessage(true, replyAddress, null), null);
-  }
-
-  @Override
   public void reply(Object message) {
     reply(message, null);
   }
 
   @Override
-  public <R> void reply(Handler<Message<R>> replyHandler) {
-    sendReply(bus.createMessage(true, replyAddress, null), replyHandler);
-  }
-
-  @Override
-  public <R> void replyWithTimeout(long timeout, Handler<AsyncResult<Message<R>>> replyHandler) {
-    sendReplyWithTimeout(bus.createMessage(true, replyAddress, null), timeout, replyHandler);
+  public <R> void replyWithTimeout(Object message, long timeout) {
+    sendReplyWithTimeout(bus.createMessage(true, replyAddress, message), timeout, null);
   }
 
   @Override
@@ -139,7 +129,7 @@ public abstract class BaseMessage<T> implements Message<T> {
     int length = 1 + 1 + 4 + address.length() + 1 + 4 * sender.host.length() +
         4 + (replyAddress == null ? 0 : replyAddress.length()) +
         getBodyLength();
-    Buffer totBuff = new Buffer(length);
+    Buffer totBuff = Buffer.newBuffer(length);
     totBuff.appendInt(0);
     totBuff.appendByte(type());
     totBuff.appendByte(send ? (byte)0 : (byte)1);
@@ -153,7 +143,7 @@ public abstract class BaseMessage<T> implements Message<T> {
     }
     writeBody(totBuff);
     totBuff.setInt(0, totBuff.length() - 4);
-    socket.write(totBuff);
+    socket.writeBuffer(totBuff);
   }
 
   protected void writeString(Buffer buff, String str) {

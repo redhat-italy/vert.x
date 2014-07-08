@@ -47,8 +47,8 @@ import java.io.File;
  */
 public class HttpServerResponseImpl implements HttpServerResponse {
 
-  private static final Buffer NOT_FOUND = new Buffer("<html><body>Resource not found</body><html>");
-  private static final Buffer FORBIDDEN = new Buffer("<html><body>Forbidden</body><html>");
+  private static final Buffer NOT_FOUND = Buffer.newBuffer("<html><body>Resource not found</body><html>");
+  private static final Buffer FORBIDDEN = Buffer.newBuffer("<html><body>Forbidden</body><html>");
 
   private final VertxInternal vertx;
   private final ServerConnection conn;
@@ -227,33 +227,33 @@ public class HttpServerResponseImpl implements HttpServerResponse {
   }
 
   @Override
-  public HttpServerResponseImpl write(Buffer chunk) {
+  public HttpServerResponseImpl writeBuffer(Buffer chunk) {
     ByteBuf buf = chunk.getByteBuf();
     return write(buf, null);
   }
 
   @Override
-  public HttpServerResponseImpl write(String chunk, String enc) {
-    return write(new Buffer(chunk, enc).getByteBuf(),  null);
+  public HttpServerResponseImpl writeString(String chunk, String enc) {
+    return write(Buffer.newBuffer(chunk, enc).getByteBuf(),  null);
   }
 
   @Override
-  public HttpServerResponseImpl write(String chunk) {
-    return write(new Buffer(chunk).getByteBuf(), null);
+  public HttpServerResponseImpl writeString(String chunk) {
+    return write(Buffer.newBuffer(chunk).getByteBuf(), null);
   }
 
   @Override
-  public void end(String chunk) {
-    end(new Buffer(chunk));
+  public void writeStringAndEnd(String chunk) {
+    writeBufferAndEnd(Buffer.newBuffer(chunk));
   }
 
   @Override
-  public void end(String chunk, String enc) {
-    end(new Buffer(chunk, enc));
+  public void writeStringAndEnd(String chunk, String enc) {
+    writeBufferAndEnd(Buffer.newBuffer(chunk, enc));
   }
 
   @Override
-  public void end(Buffer chunk) {
+  public void writeBufferAndEnd(Buffer chunk) {
     if (!chunked && !contentLengthSet()) {
       headers().set(HttpHeaders.CONTENT_LENGTH, String.valueOf(chunk.length()));
     }
@@ -327,11 +327,6 @@ public class HttpServerResponseImpl implements HttpServerResponse {
   public HttpServerResponseImpl sendFile(String filename, String notFoundResource) {
     doSendFile(filename, notFoundResource, null);
     return this;
-  }
-
-  @Override
-  public HttpServerResponse sendFile(String filename, Handler<AsyncResult<Void>> resultHandler) {
-    return sendFile(filename, null, resultHandler);
   }
 
   @Override
@@ -432,13 +427,13 @@ public class HttpServerResponseImpl implements HttpServerResponse {
   private void sendForbidden() {
     setStatusCode(HttpResponseStatus.FORBIDDEN.code());
     putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaders.TEXT_HTML);
-    end(FORBIDDEN);
+    writeBufferAndEnd(FORBIDDEN);
   }
 
   private void sendNotFound() {
     setStatusCode(HttpResponseStatus.NOT_FOUND.code());
     putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaders.TEXT_HTML);
-    end(NOT_FOUND);
+    writeBufferAndEnd(NOT_FOUND);
   }
 
   void handleDrained() {
@@ -477,7 +472,7 @@ public class HttpServerResponseImpl implements HttpServerResponse {
   }
 
 
-  private HttpServerResponseImpl write(ByteBuf chunk, final Handler<AsyncResult<Void>> doneHandler) {
+  private HttpServerResponseImpl write(ByteBuf chunk, final Handler<AsyncResult<Void>> completionHandler) {
     checkWritten();
     if (!headWritten && version != HttpVersion.HTTP_1_0 && !chunked && !contentLengthSet()) {
       throw new IllegalStateException("You must set the Content-Length header to be the total size of the message "
@@ -492,7 +487,7 @@ public class HttpServerResponseImpl implements HttpServerResponse {
       channelFuture = conn.write(new DefaultHttpContent(chunk));
     }
 
-    conn.addFuture(doneHandler, channelFuture);
+    conn.addFuture(completionHandler, channelFuture);
     return this;
   }
 }

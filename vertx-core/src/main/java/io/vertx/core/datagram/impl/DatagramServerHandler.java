@@ -47,7 +47,7 @@ final class DatagramServerHandler extends VertxHandler<DatagramSocketImpl> {
   @SuppressWarnings("unchecked")
   @Override
   protected void channelRead(final DatagramSocketImpl server, final ContextImpl context, ChannelHandlerContext chctx, final Object msg) throws Exception {
-    context.execute(() -> server.handleMessage((io.vertx.core.datagram.DatagramPacket) msg), true);
+    context.execute(() -> server.handlePacket((io.vertx.core.datagram.DatagramPacket) msg), true);
   }
 
   @Override
@@ -58,7 +58,7 @@ final class DatagramServerHandler extends VertxHandler<DatagramSocketImpl> {
       if (content.isDirect())  {
         content = safeBuffer(content, allocator);
       }
-      return new DatagramPacketImpl(packet.sender(), new Buffer(content));
+      return new DatagramPacketImpl(packet.sender(), Buffer.newBuffer(content));
     }
     return msg;
   }

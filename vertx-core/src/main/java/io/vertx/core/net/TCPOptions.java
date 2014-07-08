@@ -16,6 +16,8 @@
 
 package io.vertx.core.net;
 
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.impl.SocketDefaults;
 
 import java.util.HashSet;
@@ -29,18 +31,20 @@ public class TCPOptions extends NetworkOptions {
   // TCP stuff
   private static SocketDefaults SOCK_DEFAULTS = SocketDefaults.instance;
 
-  private boolean tcpNoDelay = true;
-  private boolean tcpKeepAlive = SOCK_DEFAULTS.isTcpKeepAlive();
-  private int soLinger = SOCK_DEFAULTS.getSoLinger();
+  private static final boolean DEFAULT_TCPNODELAY = true;
+  private static final boolean DEFAULT_TCPKEEPALIVE = SOCK_DEFAULTS.isTcpKeepAlive();
+  private static final int DEFAULT_SOLINGER = SOCK_DEFAULTS.getSoLinger();
+
+  private boolean tcpNoDelay = DEFAULT_TCPNODELAY;
+  private boolean tcpKeepAlive = DEFAULT_TCPKEEPALIVE;
+  private int soLinger = DEFAULT_SOLINGER;
   private boolean usePooledBuffers;
   
   // SSL stuff
 
   private boolean ssl;
-  private String keyStorePath;
-  private String keyStorePassword;
-  private String trustStorePath;
-  private String trustStorePassword;
+  private KeyStoreOptions keyStore;
+  private TrustStoreOptions trustStore;
   private Set<String> enabledCipherSuites;
 
   public TCPOptions(TCPOptions other) {
@@ -50,15 +54,68 @@ public class TCPOptions extends NetworkOptions {
     this.soLinger = other.soLinger;
     this.usePooledBuffers = other.usePooledBuffers;
     this.ssl = other.ssl;
-    this.keyStorePath = other.keyStorePath;
-    this.keyStorePassword = other.keyStorePassword;
-    this.trustStorePath = other.trustStorePath;
-    this.trustStorePassword = other.trustStorePassword;
+    this.keyStore = other.keyStore != null ? other.keyStore.clone() : null;
+    this.trustStore = other.trustStore != null ? other.trustStore.clone() : null;
     this.enabledCipherSuites = other.enabledCipherSuites == null ? null : new HashSet<>(other.enabledCipherSuites);
+  }
+
+  public TCPOptions(JsonObject json) {
+    super(json);
+    this.tcpNoDelay = json.getBoolean("tcpNoDelay", DEFAULT_TCPNODELAY);
+    this.tcpKeepAlive = json.getBoolean("tcpKeepAlive", DEFAULT_TCPKEEPALIVE);
+    this.soLinger = json.getInteger("soLinger", DEFAULT_SOLINGER);
+    this.usePooledBuffers = json.getBoolean("usePooledBuffers", false);
+    this.ssl = json.getBoolean("ssl", false);
+    JsonObject keyStoreJson = json.getObject("keyStore");
+    if (keyStoreJson != null) {
+      String type = keyStoreJson.getString("type", null);
+      String path = keyStoreJson.getString("path", null);
+      String password = keyStoreJson.getString("password", null);
+      String key = keyStoreJson.getString("key", null);
+      String cert = keyStoreJson.getString("cert", null);
+      switch (type != null ? type.toLowerCase() : "jks") {
+        case "jks":
+          keyStore = new JKSOptions().setPath(path).setPassword(password);
+          break;
+        case "pkcs12":
+          keyStore = new PKCS12Options().setPath(path).setPassword(password);
+          break;
+        case "keycert":
+          keyStore = new KeyCertOptions().setKeyPath(key).setCertPath(cert);
+          break;
+      }
+    }
+    JsonObject trustStoreJson = json.getObject("trustStore");
+    if (trustStoreJson != null) {
+      String type = trustStoreJson.getString("type", null);
+      String path = trustStoreJson.getString("path", null);
+      String password = trustStoreJson.getString("password", null);
+      JsonArray caJson = trustStoreJson.getArray("ca", null);
+      switch (type != null ? type.toLowerCase() : "jks") {
+        case "jks":
+          trustStore = new JKSOptions().setPath(path).setPassword(password);
+          break;
+        case "pkcs12":
+          trustStore = new PKCS12Options().setPath(path).setPassword(password);
+          break;
+        case "ca":
+          CaOptions ca = new CaOptions();
+          if (caJson != null) {
+            caJson.forEach(caElt -> ca.addCertPath(caElt.toString()));
+          }
+          trustStore = ca;
+          break;
+      }
+    }
+    JsonArray arr = json.getArray("enabledCipherSuites");
+    this.enabledCipherSuites = arr == null ? null : new HashSet<String>(arr.toList());
   }
 
   public TCPOptions() {
     super();
+    tcpNoDelay = DEFAULT_TCPNODELAY;
+    tcpKeepAlive = DEFAULT_TCPKEEPALIVE;
+    soLinger = DEFAULT_SOLINGER;
   }
 
   public boolean isTcpNoDelay() {
@@ -109,39 +166,21 @@ public class TCPOptions extends NetworkOptions {
     return this;
   }
 
-  public String getKeyStorePath() {
-    return keyStorePath;
+  public KeyStoreOptions getKeyStore() {
+    return keyStore;
   }
 
-  public TCPOptions setKeyStorePath(String keyStorePath) {
-    this.keyStorePath = keyStorePath;
+  public TCPOptions setKeyStore(KeyStoreOptions keyStore) {
+    this.keyStore = keyStore;
     return this;
   }
 
-  public String getKeyStorePassword() {
-    return keyStorePassword;
+  public TrustStoreOptions getTrustStore() {
+    return trustStore;
   }
 
-  public TCPOptions setKeyStorePassword(String keyStorePassword) {
-    this.keyStorePassword = keyStorePassword;
-    return this;
-  }
-
-  public String getTrustStorePath() {
-    return trustStorePath;
-  }
-
-  public TCPOptions setTrustStorePath(String trustStorePath) {
-    this.trustStorePath = trustStorePath;
-    return this;
-  }
-
-  public String getTrustStorePassword() {
-    return trustStorePassword;
-  }
-
-  public TCPOptions setTrustStorePassword(String trustStorePassword) {
-    this.trustStorePassword = trustStorePassword;
+  public TCPOptions setTrustStore(TrustStoreOptions trustStore) {
+    this.trustStore = trustStore;
     return this;
   }
 

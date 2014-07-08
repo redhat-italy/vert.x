@@ -39,10 +39,10 @@ import io.vertx.core.net.NetServer;
 import io.vertx.core.net.NetServerOptions;
 import io.vertx.core.net.NetSocket;
 import io.vertx.core.net.impl.ServerID;
+import io.vertx.core.parsetools.RecordParser;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ChoosableIterable;
 import io.vertx.core.spi.cluster.ClusterManager;
-import io.vertx.core.parsetools.RecordParser;
 
 import java.util.List;
 import java.util.Objects;
@@ -63,7 +63,7 @@ public class EventBusImpl implements EventBus {
 
   private static final Logger log = LoggerFactory.getLogger(EventBusImpl.class);
 
-  private static final Buffer PONG = new Buffer(new byte[] { (byte)1 });
+  private static final Buffer PONG = Buffer.newBuffer(new byte[] { (byte)1 });
   private static final long PING_INTERVAL = 20000;
   private static final long PING_REPLY_INTERVAL = 20000;
   private final VertxInternal vertx;
@@ -148,14 +148,14 @@ public class EventBusImpl implements EventBus {
   }
 
   @Override
-  public void close(Handler<AsyncResult<Void>> doneHandler) {
+  public void close(Handler<AsyncResult<Void>> completionHandler) {
 		if (clusterMgr != null) {
 			clusterMgr.leave();
 		}
 		if (server != null) {
-			server.close(doneHandler);
-		} else if (doneHandler != null) {
-      vertx.runOnContext(v-> doneHandler.handle(new FutureResultImpl<>((Void)null)));
+			server.close(completionHandler);
+		} else if (completionHandler != null) {
+      vertx.runOnContext(v-> completionHandler.handle(new FutureResultImpl<>((Void)null)));
     }
   }
 
@@ -246,7 +246,7 @@ public class EventBusImpl implements EventBus {
             BaseMessage received = MessageFactory.read(buff, codecMap);
             if (received.type() == MessageFactory.TYPE_PING) {
               // Send back a pong - a byte will do
-              socket.write(PONG);
+              socket.writeBuffer(PONG);
             } else {
               receiveMessage(received, -1, null, null);
             }
@@ -776,9 +776,9 @@ public class EventBusImpl implements EventBus {
     }
 
     // Called by context on undeploy
-    public void close(Handler<AsyncResult<Void>> doneHandler) {
+    public void close(Handler<AsyncResult<Void>> completionHandler) {
       unregisterHandler(this.address, this.handler, emptyHandler());
-      doneHandler.handle(new FutureResultImpl<>((Void)null));
+      completionHandler.handle(new FutureResultImpl<>((Void)null));
     }
 
   }
@@ -809,7 +809,7 @@ public class EventBusImpl implements EventBus {
     }
 
     @Override
-    public synchronized void doneHandler(Handler<AsyncResult<Void>> completionHandler) {
+    public synchronized void completionHandler(Handler<AsyncResult<Void>> completionHandler) {
       Objects.requireNonNull(completionHandler);
       if (result != null) {
         completionHandler.handle(result);
@@ -824,9 +824,9 @@ public class EventBusImpl implements EventBus {
     }
 
     @Override
-    public void unregister(Handler<AsyncResult<Void>> doneHandler) {
-      Objects.requireNonNull(doneHandler);
-      unregisterHandler(address, handler, doneHandler);
+    public void unregister(Handler<AsyncResult<Void>> completionHandler) {
+      Objects.requireNonNull(completionHandler);
+      unregisterHandler(address, handler, completionHandler);
     }
 
     private synchronized void setResult(AsyncResult<Void> result) {

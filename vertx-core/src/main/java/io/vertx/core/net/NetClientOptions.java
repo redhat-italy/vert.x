@@ -16,22 +16,34 @@
 
 package io.vertx.core.net;
 
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
+
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
 public class NetClientOptions extends ClientOptions {
 
+  private static final long DEFAULT_RECONNECTINTERVAL = 1000;
+
   private int reconnectAttempts;
-  private long reconnectInterval = 1000;
+  private long reconnectInterval;
 
   public NetClientOptions() {
     super();
+    this.reconnectInterval = DEFAULT_RECONNECTINTERVAL;
   }
 
   public NetClientOptions(NetClientOptions other) {
     super(other);
     this.reconnectAttempts = other.reconnectAttempts;
     this.reconnectInterval = other.reconnectInterval;
+  }
+
+  public NetClientOptions(JsonObject json) {
+    super(json);
+    this.reconnectAttempts = json.getInteger("reconnectAttempts", 0);
+    this.reconnectInterval = json.getLong("reconnectInterval", DEFAULT_RECONNECTINTERVAL);
   }
 
   public NetClientOptions setReconnectAttempts(int attempts) {
@@ -77,6 +89,18 @@ public class NetClientOptions extends ClientOptions {
 
   public NetClientOptions setTrustAll(boolean trustAll) {
     super.setTrustAll(trustAll);
+    return this;
+  }
+
+  @Override
+  public NetClientOptions addCrlPath(String crlPath) throws NullPointerException {
+    super.addCrlPath(crlPath);
+    return this;
+  }
+
+  @Override
+  public NetClientOptions addCrlValue(Buffer crlValue) throws NullPointerException {
+    super.addCrlValue(crlValue);
     return this;
   }
 
@@ -135,26 +159,14 @@ public class NetClientOptions extends ClientOptions {
   }
 
   @Override
-  public NetClientOptions setKeyStorePath(String keyStorePath) {
-    super.setKeyStorePath(keyStorePath);
+  public NetClientOptions setKeyStore(KeyStoreOptions keyStore) {
+    super.setKeyStore(keyStore);
     return this;
   }
 
   @Override
-  public NetClientOptions setKeyStorePassword(String keyStorePassword) {
-    super.setKeyStorePassword(keyStorePassword);
-    return this;
-  }
-
-  @Override
-  public NetClientOptions setTrustStorePath(String trustStorePath) {
-    super.setTrustStorePath(trustStorePath);
-    return this;
-  }
-
-  @Override
-  public NetClientOptions setTrustStorePassword(String trustStorePassword) {
-    super.setTrustStorePassword(trustStorePassword);
+  public NetClientOptions setTrustStore(TrustStoreOptions trustStore) {
+    super.setTrustStore(trustStore);
     return this;
   }
 

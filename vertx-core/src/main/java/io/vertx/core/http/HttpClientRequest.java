@@ -19,6 +19,9 @@ package io.vertx.core.http;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.gen.Fluent;
+import io.vertx.core.gen.GenIgnore;
+import io.vertx.core.gen.VertxGen;
 import io.vertx.core.streams.WriteStream;
 
 /**
@@ -48,8 +51,8 @@ import io.vertx.core.streams.WriteStream;
  *
  * req.headers().put("some-header", "hello")
  *     .put("Content-Length", 5)
- *     .write(new Buffer(new byte[]{1, 2, 3, 4, 5}))
- *     .write(new Buffer(new byte[]{6, 7, 8, 9, 10}))
+ *     .write(Buffer.newBuffer(new byte[]{1, 2, 3, 4, 5}))
+ *     .write(Buffer.newBuffer(new byte[]{6, 7, 8, 9, 10}))
  *     .end();
  *
  * </pre>
@@ -57,6 +60,7 @@ import io.vertx.core.streams.WriteStream;
  *
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
+@VertxGen
 public interface HttpClientRequest extends WriteStream<HttpClientRequest> {
 
   /**
@@ -64,6 +68,7 @@ public interface HttpClientRequest extends WriteStream<HttpClientRequest> {
    * @param chunked
    * @return A reference to this, so multiple method calls can be chained.
    */
+  @Fluent
   HttpClientRequest setChunked(boolean chunked);
 
   /**
@@ -83,8 +88,10 @@ public interface HttpClientRequest extends WriteStream<HttpClientRequest> {
    * @param value The header value
    * @return A reference to this, so multiple method calls can be chained.
    */
+  @Fluent
   HttpClientRequest putHeader(String name, String value);
 
+  @GenIgnore
   HttpClientRequest putHeader(CharSequence name, CharSequence value);
 
 
@@ -94,8 +101,10 @@ public interface HttpClientRequest extends WriteStream<HttpClientRequest> {
    * @param values The header values
    * @return A reference to this, so multiple method calls can be chained.
    */
+  @GenIgnore
   HttpClientRequest putHeader(String name, Iterable<String> values);
 
+  @GenIgnore
   HttpClientRequest putHeader(CharSequence name, Iterable<CharSequence> values);
 
   /**
@@ -103,21 +112,24 @@ public interface HttpClientRequest extends WriteStream<HttpClientRequest> {
    *
    * @return A reference to this, so multiple method calls can be chained.
    */
-  HttpClientRequest write(Buffer chunk);
+  @Fluent
+  HttpClientRequest writeBuffer(Buffer chunk);
 
   /**
    * Write a {@link String} to the request body, encoded in UTF-8.
    *
    * @return A reference to this, so multiple method calls can be chained.
    */
-  HttpClientRequest write(String chunk);
+  @Fluent
+  HttpClientRequest writeString(String chunk);
 
   /**
    * Write a {@link String} to the request body, encoded using the encoding {@code enc}.
    *
    * @return A reference to this, so multiple method calls can be chained.
    */
-  HttpClientRequest write(String chunk, String enc);
+  @Fluent
+  HttpClientRequest writeString(String chunk, String enc);
 
   /**
    * If you send an HTTP request with the header {@code Expect} set to the value {@code 100-continue}
@@ -127,6 +139,7 @@ public interface HttpClientRequest extends WriteStream<HttpClientRequest> {
    * the {@link #sendHead()} method to force the request header to be written before the request has ended.
    * @return A reference to this, so multiple method calls can be chained.
    */
+  @Fluent
   HttpClientRequest continueHandler(Handler<Void> handler);
 
   /**
@@ -136,23 +149,24 @@ public interface HttpClientRequest extends WriteStream<HttpClientRequest> {
    *
    * @return A reference to this, so multiple method calls can be chained.
    */
+  @Fluent
   HttpClientRequest sendHead();
 
   /**
-   * Same as {@link #end(Buffer)} but writes a String with the default encoding
+   * Same as {@link #writeBufferAndEnd(Buffer)} but writes a String with the default encoding
    */
-  void end(String chunk);
+  void writeStringAndEnd(String chunk);
 
   /**
-   * Same as {@link #end(Buffer)} but writes a String with the specified encoding
+   * Same as {@link #writeBufferAndEnd(Buffer)} but writes a String with the specified encoding
    */
-  void end(String chunk, String enc);
+  void writeStringAndEnd(String chunk, String enc);
 
   /**
    * Same as {@link #end()} but writes some data to the request body before ending. If the request is not chunked and
    * no other data has been written then the Content-Length header will be automatically set
    */
-  void end(Buffer chunk);
+  void writeBufferAndEnd(Buffer chunk);
 
   /**
    * Ends the request. If no data has been written to the request body, and {@link #sendHead()} has not been called then
@@ -170,6 +184,7 @@ public interface HttpClientRequest extends WriteStream<HttpClientRequest> {
     * @param timeoutMs The quantity of time in milliseconds.
     * @return A reference to this, so multiple method calls can be chained.
     */
-   HttpClientRequest setTimeout(long timeoutMs);
+  @Fluent
+  HttpClientRequest setTimeout(long timeoutMs);
 
 }

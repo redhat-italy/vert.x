@@ -54,7 +54,6 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.ServerWebSocket;
-import io.vertx.core.http.WebSocketFrame;
 import io.vertx.core.http.impl.cgbystrom.FlashPolicyHandler;
 import io.vertx.core.http.impl.ws.WebSocketFrameImpl;
 import io.vertx.core.http.impl.ws.WebSocketFrameInternal;
@@ -66,6 +65,7 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.net.impl.HandlerHolder;
 import io.vertx.core.net.impl.HandlerManager;
+import io.vertx.core.net.impl.KeyStoreHelper;
 import io.vertx.core.net.impl.PartialPooledByteBufAllocator;
 import io.vertx.core.net.impl.SSLHelper;
 import io.vertx.core.net.impl.ServerID;
@@ -126,7 +126,7 @@ public class HttpServerImpl implements HttpServer, Closeable {
       }
       creatingContext.addCloseHook(this);
     }
-    sslHelper = new SSLHelper(options);
+    this.sslHelper = new SSLHelper(options, KeyStoreHelper.create(vertx, options.getKeyStore()), KeyStoreHelper.create(vertx, options.getTrustStore()));
   }
 
   @Override
@@ -240,7 +240,7 @@ public class HttpServerImpl implements HttpServer, Closeable {
             vertx.runOnContext(v -> listenHandler.handle(new FutureResultImpl<>(t)));
           } else {
             // No handler - log so user can see failure
-            listenContext.reportException(t);
+            log.error(t);
           }
           listening = false;
           return this;
@@ -267,7 +267,7 @@ public class HttpServerImpl implements HttpServer, Closeable {
           } else if (!future.isSuccess()) {
             listening  = false;
             // No handler - log so user can see failure
-            listenContext.reportException(future.cause());
+            log.error(future.cause());
           }
         }
       });
@@ -489,7 +489,7 @@ public class HttpServerImpl implements HttpServer, Closeable {
             break;
           case PING:
             // Echo back the content of the PING frame as PONG frame as specified in RFC 6455 Section 5.5.2
-            ch.writeAndFlush(new WebSocketFrameImpl(WebSocketFrame.FrameType.PONG, wsFrame.getBinaryData()));
+            ch.writeAndFlush(new WebSocketFrameImpl(FrameType.PONG, wsFrame.getBinaryData()));
             break;
           case CLOSE:
             if (!closeFrameSent) {

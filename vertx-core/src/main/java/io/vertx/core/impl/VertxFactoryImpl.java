@@ -18,14 +18,15 @@ package io.vertx.core.impl;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.VertxFactory;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.spi.VertxFactory;
 
 /**
  * @author pidster
+ * @author <a href="http://tfox.org">Tim Fox</a>
  *
  */
-public class VertxFactoryImpl extends VertxFactory {
+public class VertxFactoryImpl implements VertxFactory {
 
   @Override
   public Vertx createVertx() {

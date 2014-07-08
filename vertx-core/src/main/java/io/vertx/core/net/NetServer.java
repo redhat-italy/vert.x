@@ -18,6 +18,9 @@ package io.vertx.core.net;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.core.gen.Fluent;
+import io.vertx.core.gen.GenIgnore;
+import io.vertx.core.gen.VertxGen;
 
 /**
  * Represents a TCP or SSL server<p>
@@ -30,6 +33,7 @@ import io.vertx.core.Handler;
  *
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
+@VertxGen
 public interface NetServer {
 
   /**
@@ -38,15 +42,19 @@ public interface NetServer {
    * connect handler.
    * @return a reference to this so multiple method calls can be chained together
    */
+  @Fluent
   NetServer connectHandler(Handler<NetSocket> connectHandler);
 
+  @GenIgnore
   Handler<NetSocket> connectHandler();
 
+  @Fluent
   NetServer listen();
 
   /**
    * Instruct the server to listen for incoming connections on the specified {@code port} and all available interfaces.
    */
+  @Fluent
   NetServer listen(Handler<AsyncResult<NetServer>> listenHandler);
 
   /**
@@ -58,7 +66,7 @@ public interface NetServer {
    * Close the server. This will close any currently open connections. The event handler {@code done} will be called
    * when the close is complete.
    */
-  void close(Handler<AsyncResult<Void>> doneHandler);
+  void close(Handler<AsyncResult<Void>> completionHandler);
 
   /**
    * The actual port the server is listening on. This is useful if you bound the server specifying 0 as port number

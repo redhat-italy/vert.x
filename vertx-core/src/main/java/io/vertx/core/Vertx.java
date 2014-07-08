@@ -18,10 +18,11 @@ package io.vertx.core;
 
 import io.vertx.core.datagram.DatagramSocket;
 import io.vertx.core.datagram.DatagramSocketOptions;
-import io.vertx.core.datagram.InternetProtocolFamily;
 import io.vertx.core.dns.DnsClient;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.file.FileSystem;
+import io.vertx.core.gen.GenIgnore;
+import io.vertx.core.gen.VertxGen;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpServer;
@@ -31,7 +32,10 @@ import io.vertx.core.net.NetClientOptions;
 import io.vertx.core.net.NetServer;
 import io.vertx.core.net.NetServerOptions;
 import io.vertx.core.shareddata.SharedData;
+import io.vertx.core.spi.VerticleFactory;
+import io.vertx.core.spi.VertxFactory;
 
+import java.util.ServiceLoader;
 import java.util.Set;
 
 /**
@@ -47,9 +51,23 @@ import java.util.Set;
  *
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
+@VertxGen
 public interface Vertx {
 
-  //Http http();
+  @GenIgnore
+  static Vertx newVertx() {
+    return factory.createVertx();
+  }
+
+  @GenIgnore
+  static Vertx newVertx(VertxOptions options) {
+    return factory.createVertx(options);
+  }
+
+  @GenIgnore
+  static void newVertx(VertxOptions options, Handler<AsyncResult<Vertx>> resultHandler) {
+    factory.createVertx(options, resultHandler);
+  }
 
   /**
    * Create a TCP/SSL server
@@ -71,14 +89,7 @@ public interface Vertx {
    */
   HttpClient createHttpClient(HttpClientOptions options);
 
-  /**
-   * Create a new {@link io.vertx.core.datagram.DatagramSocket}.
-   *
-   * @param family  use {@link InternetProtocolFamily} to use for multicast. If {@code null} is used it's up to the
-   *                operation system to detect it's default.
-   * @return socket the created {@link io.vertx.core.datagram.DatagramSocket}.
-   */
-  DatagramSocket createDatagramSocket(InternetProtocolFamily family, DatagramSocketOptions options);
+  DatagramSocket createDatagramSocket(DatagramSocketOptions options);
 
   /**
    * The File system object
@@ -88,6 +99,7 @@ public interface Vertx {
   /**
    * The event bus
    */
+  @GenIgnore
   EventBus eventBus();
 
   /**
@@ -98,6 +110,7 @@ public interface Vertx {
   /**
    * The shared data object
    */
+  @GenIgnore
   SharedData sharedData();
 
   /**
@@ -139,26 +152,46 @@ public interface Vertx {
   /**
    * Stop the eventbus and any resource managed by the eventbus.
    */
-  void close(Handler<AsyncResult<Void>> doneHandler);
+  void close(Handler<AsyncResult<Void>> completionHandler);
 
-  void deployVerticle(Verticle verticle);
+  @GenIgnore
+  void deployVerticleInstance(Verticle verticle);
 
-  void deployVerticle(String verticleClass);
+  @GenIgnore
+  void deployVerticleInstance(Verticle verticle, DeploymentOptions options);
 
-  void deployVerticle(Verticle verticle, Handler<AsyncResult<String>> doneHandler);
+  @GenIgnore
+  void deployVerticleInstance(Verticle verticle, DeploymentOptions options, Handler<AsyncResult<String>> completionHandler);
 
-  void deployVerticle(String verticleClass, Handler<AsyncResult<String>> doneHandler);
+  void deployVerticle(String verticleName);
 
-  void deployVerticle(Verticle verticle, DeploymentOptions options);
+  void deployVerticle(String verticleName, DeploymentOptions options);
 
-  void deployVerticle(String verticleClass, DeploymentOptions options);
+  void deployVerticle(String verticleName, DeploymentOptions options, Handler<AsyncResult<String>> completionHandler);
 
-  void deployVerticle(Verticle verticle, DeploymentOptions options, Handler<AsyncResult<String>> doneHandler);
-
-  void deployVerticle(String verticleClass, DeploymentOptions options, Handler<AsyncResult<String>> doneHandler);
-
-  void undeployVerticle(String deploymentID, Handler<AsyncResult<Void>> doneHandler);
+  void undeployVerticle(String deploymentID, Handler<AsyncResult<Void>> completionHandler);
 
   Set<String> deployments();
+
+  @GenIgnore
+  void registerVerticleFactory(VerticleFactory factory);
+
+  @GenIgnore
+  void unregisterVerticleFactory(VerticleFactory factory);
+
+  @GenIgnore
+  Set<VerticleFactory> verticleFactories();
+
+  static final VertxFactory factory = loadFactory();
+
+  @GenIgnore
+  static VertxFactory loadFactory() {
+    ServiceLoader<VertxFactory> factories = ServiceLoader.load(VertxFactory.class);
+    if (factories.iterator().hasNext()) {
+      return factories.iterator().next();
+    } else {
+      throw new IllegalStateException("Cannot find BufferFactory service");
+    }
+  }
 
 }

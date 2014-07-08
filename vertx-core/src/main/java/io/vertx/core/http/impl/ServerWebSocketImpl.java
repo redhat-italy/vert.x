@@ -155,7 +155,7 @@ public class ServerWebSocketImpl extends WebSocketImplBase<ServerWebSocket> impl
   }
 
   @Override
-  public ServerWebSocket write(Buffer data) {
+  public ServerWebSocket writeBuffer(Buffer data) {
     writeBinaryFrame(data);
     return this;
   }

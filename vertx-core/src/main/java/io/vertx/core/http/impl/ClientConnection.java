@@ -38,7 +38,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.WebSocket;
 import io.vertx.core.http.WebSocketConnectOptions;
-import io.vertx.core.http.WebSocketVersion;
 import io.vertx.core.http.impl.ws.WebSocketFrameInternal;
 import io.vertx.core.impl.ContextImpl;
 import io.vertx.core.impl.VertxInternal;
@@ -106,11 +105,11 @@ class ClientConnection extends ConnectionBase {
         wsuri = new URI((ssl ? "https:" : "http:") + "//" + host + ":" + port + options.getRequestURI());
       }
       io.netty.handler.codec.http.websocketx.WebSocketVersion version;
-      if (options.getVersion() == WebSocketVersion.HYBI_00) {
+      if (options.getVersion() == 0) {
         version = io.netty.handler.codec.http.websocketx.WebSocketVersion.V00;
-      } else if (options.getVersion() == WebSocketVersion.HYBI_08) {
+      } else if (options.getVersion() == 8) {
         version = io.netty.handler.codec.http.websocketx.WebSocketVersion.V08;
-      } else if (options.getVersion() == WebSocketVersion.RFC6455) {
+      } else if (options.getVersion() == 13) {
         version = io.netty.handler.codec.http.websocketx.WebSocketVersion.V13;
       } else {
         throw new IllegalArgumentException("Invalid version");
@@ -249,19 +248,14 @@ class ClientConnection extends ConnectionBase {
     return requests.size();
   }
 
-  //TODO - combine these with same in ServerConnection and NetSocket
   @Override
   public void handleInterestedOpsChanged() {
-    try {
-      if (!isNotWritable()) {
-        if (currentRequest != null) {
-          currentRequest.handleDrained();
-        } else if (ws != null) {
-          ws.writable();
-        }
+    if (!isNotWritable()) {
+      if (currentRequest != null) {
+        currentRequest.handleDrained();
+      } else if (ws != null) {
+        ws.writable();
       }
-    } catch (Throwable t) {
-      handleHandlerException(t);
     }
   }
 
@@ -282,19 +276,12 @@ class ClientConnection extends ConnectionBase {
   }
 
   void handleResponseChunk(Buffer buff) {
-    try {
-      currentResponse.handleChunk(buff);
-    } catch (Throwable t) {
-      handleHandlerException(t);
-    }
+    currentResponse.handleChunk(buff);
   }
 
   void handleResponseEnd(LastHttpContent trailer) {
-    try {
-      currentResponse.handleEnd(trailer);
-    } catch (Throwable t) {
-      handleHandlerException(t);
-    }
+    currentResponse.handleEnd(trailer);
+
     // We don't signal response end for a 100-continue response as a real response will follow
     // Also we keep the connection open for an HTTP CONNECT
     if (currentResponse.statusCode() != 100 && requestForResponse.getRequest().getMethod() != HttpMethod.CONNECT) {

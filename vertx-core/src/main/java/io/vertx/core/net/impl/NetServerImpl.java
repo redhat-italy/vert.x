@@ -83,7 +83,7 @@ public class NetServerImpl implements NetServer, Closeable {
   public NetServerImpl(VertxInternal vertx, NetServerOptions options) {
     this.vertx = vertx;
     this.options = new NetServerOptions(options);
-    this.sslHelper = new SSLHelper(options);
+    this.sslHelper = new SSLHelper(options, KeyStoreHelper.create(vertx, options.getKeyStore()), KeyStoreHelper.create(vertx, options.getTrustStore()));
     this.creatingContext = vertx.getContext();
     if (creatingContext != null) {
       if (creatingContext.isMultithreaded()) {
@@ -184,7 +184,7 @@ public class NetServerImpl implements NetServer, Closeable {
             vertx.runOnContext(v ->  listenHandler.handle(new FutureResultImpl<>(t)));
           } else {
             // No handler - log so user can see failure
-            listenContext.reportException(t);
+            log.error(t);
           }
           listening = false;
           return this;
@@ -207,7 +207,7 @@ public class NetServerImpl implements NetServer, Closeable {
         if (listenHandler != null) {
           final AsyncResult<NetServer> res;
           if (actualServer.bindFuture.isSuccess()) {
-            res = new FutureResultImpl<NetServer>(NetServerImpl.this);
+            res = new FutureResultImpl<>(NetServerImpl.this);
           } else {
             listening = false;
             res = new FutureResultImpl<>(actualServer.bindFuture.cause());
@@ -215,7 +215,7 @@ public class NetServerImpl implements NetServer, Closeable {
           listenContext.execute(() -> listenHandler.handle(res), true);
         } else if (!actualServer.bindFuture.isSuccess()) {
           // No handler - log so user can see failure
-          listenContext.reportException(actualServer.bindFuture.cause());
+          log.error(actualServer.bindFuture.cause());
           listening = false;
         }
       });

@@ -16,12 +16,19 @@
 
 package io.vertx.core.http;
 
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.ClientOptions;
+import io.vertx.core.net.KeyStoreOptions;
+import io.vertx.core.net.TrustStoreOptions;
 
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
 public class HttpClientOptions extends ClientOptions {
+
+  private static final int DEFAULT_MAXPOOLSIZE = 5;
+  private static final boolean DEFAULT_KEEPALIVE = true;
 
   // Client specific SSL stuff
 
@@ -29,13 +36,15 @@ public class HttpClientOptions extends ClientOptions {
 
   // HTTP stuff
 
-  private int maxPoolSize = 5;
-  private boolean keepAlive = true;
+  private int maxPoolSize;
+  private boolean keepAlive;
   private boolean pipelining;
   private boolean tryUseCompression;
 
   public HttpClientOptions() {
     super();
+    this.maxPoolSize = DEFAULT_MAXPOOLSIZE;
+    this.keepAlive = DEFAULT_KEEPALIVE;
   }
 
   public HttpClientOptions(HttpClientOptions other) {
@@ -45,6 +54,14 @@ public class HttpClientOptions extends ClientOptions {
     this.keepAlive = other.keepAlive;
     this.pipelining = other.pipelining;
     this.tryUseCompression = other.tryUseCompression;
+  }
+
+  public HttpClientOptions(JsonObject json) {
+    super(json);
+    this.maxPoolSize = json.getInteger("maxPoolSize", DEFAULT_MAXPOOLSIZE);
+    this.keepAlive = json.getBoolean("keepAlive", DEFAULT_KEEPALIVE);
+    this.pipelining = json.getBoolean("pipelining", false);
+    this.tryUseCompression = json.getBoolean("tryUseCompression", false);
   }
 
   public int getMaxPoolSize() {
@@ -118,6 +135,18 @@ public class HttpClientOptions extends ClientOptions {
   }
 
   @Override
+  public HttpClientOptions addCrlPath(String crlPath) throws NullPointerException {
+    super.addCrlPath(crlPath);
+    return this;
+  }
+
+  @Override
+  public HttpClientOptions addCrlValue(Buffer crlValue) throws NullPointerException {
+    super.addCrlValue(crlValue);
+    return this;
+  }
+
+  @Override
   public HttpClientOptions setSendBufferSize(int sendBufferSize) {
     super.setSendBufferSize(sendBufferSize);
     return this;
@@ -172,26 +201,14 @@ public class HttpClientOptions extends ClientOptions {
   }
 
   @Override
-  public HttpClientOptions setKeyStorePath(String keyStorePath) {
-    super.setKeyStorePath(keyStorePath);
+  public HttpClientOptions setKeyStore(KeyStoreOptions keyStore) {
+    super.setKeyStore(keyStore);
     return this;
   }
 
   @Override
-  public HttpClientOptions setKeyStorePassword(String keyStorePassword) {
-    super.setKeyStorePassword(keyStorePassword);
-    return this;
-  }
-
-  @Override
-  public HttpClientOptions setTrustStorePath(String trustStorePath) {
-    super.setTrustStorePath(trustStorePath);
-    return this;
-  }
-
-  @Override
-  public HttpClientOptions setTrustStorePassword(String trustStorePassword) {
-    super.setTrustStorePassword(trustStorePassword);
+  public HttpClientOptions setTrustStore(TrustStoreOptions trustStore) {
+    super.setTrustStore(trustStore);
     return this;
   }
 
