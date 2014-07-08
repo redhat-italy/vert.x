@@ -41,8 +41,8 @@ public class InfinispanAsyncMultiMapBlocking<K, V> implements AsyncMultiMap<K, V
     }
 
     @Override
-    public void get(final K k, Handler<AsyncResult<ChoosableIterable<V>>> asyncResultHandler) {
-        vertx.executeBlocking(() -> cache.get(k), asyncResultHandler);
+    public void get(final K k, Handler<AsyncResult<ChoosableIterable<V>>> completionHandler) {
+        vertx.executeBlocking(() -> cache.get(k), completionHandler);
     }
 
     @Override

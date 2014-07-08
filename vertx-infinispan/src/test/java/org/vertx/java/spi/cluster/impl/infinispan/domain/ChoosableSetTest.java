@@ -14,7 +14,7 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package org.vertx.java.spi.cluster.impl.infinispan;
+package org.vertx.java.spi.cluster.impl.infinispan.domain;
 
 import org.junit.Assert;
 import org.junit.Test;
