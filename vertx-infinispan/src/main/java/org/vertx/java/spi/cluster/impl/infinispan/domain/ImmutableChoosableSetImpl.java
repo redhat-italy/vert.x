@@ -88,4 +88,28 @@ public class ImmutableChoosableSetImpl<T> implements ImmutableChoosableSet<T> {
         }
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof ImmutableChoosableSetImpl)) {
+            return false;
+        }
+
+        ImmutableChoosableSetImpl that = (ImmutableChoosableSetImpl) o;
+
+        if((value!=null) && (that.value!=null)) {
+            return value.equals(that.value) && next.equals(that.next);
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        int result = value != null ? value.hashCode() : 0;
+        result = 31 * result + next.hashCode();
+        return result;
+    }
 }
