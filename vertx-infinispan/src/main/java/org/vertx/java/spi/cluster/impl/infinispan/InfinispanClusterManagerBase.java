@@ -18,8 +18,9 @@ package org.vertx.java.spi.cluster.impl.infinispan;
 
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
-import io.vertx.core.spi.cluster.*;
-import org.infinispan.Cache;
+import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.core.spi.cluster.NodeListener;
+import io.vertx.core.spi.cluster.VertxSPI;
 import org.infinispan.configuration.cache.CacheMode;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
@@ -28,15 +29,11 @@ import org.infinispan.configuration.global.GlobalConfigurationBuilder;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.manager.EmbeddedCacheManager;
 import org.infinispan.remoting.transport.Address;
-import org.vertx.java.spi.cluster.impl.infinispan.async.InfinispanAsyncMap;
-import org.vertx.java.spi.cluster.impl.infinispan.async.InfinispanAsyncMultiMap;
-import org.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
 import org.vertx.java.spi.cluster.impl.infinispan.domain.serializer.ImmutableChoosableSetSerializer;
 import org.vertx.java.spi.cluster.impl.infinispan.listeners.CacheManagerListener;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public abstract class InfinispanClusterManagerBase implements ClusterManager {
 
@@ -117,8 +114,6 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
                 .build();
         cacheManager = new DefaultCacheManager(globalConfiguration, asyncConfiguration);
         cacheManager.start();
-
-        cacheManager.defineConfiguration("configuration", syncConfiguration);
         active = true;
     }
 
