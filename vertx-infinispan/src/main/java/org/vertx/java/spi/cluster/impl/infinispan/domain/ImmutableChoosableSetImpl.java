@@ -31,7 +31,7 @@ public class ImmutableChoosableSetImpl<T> implements ImmutableChoosableSet<T> {
     }
 
     public ImmutableChoosableSetImpl(T value) {
-        this(value, EmptyImmutableChoosableSet.emptySet);
+        this(value, ImmutableChoosableSetEmpty.emptySet);
     }
 
     @Override

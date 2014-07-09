@@ -18,7 +18,7 @@ package org.vertx.java.spi.cluster.impl.infinispan.domain.serializer;
 
 import org.infinispan.commons.marshall.AdvancedExternalizer;
 import org.infinispan.commons.util.Util;
-import org.vertx.java.spi.cluster.impl.infinispan.domain.EmptyImmutableChoosableSet;
+import org.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSetEmpty;
 import org.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
 import org.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSetImpl;
 
@@ -29,7 +29,7 @@ import java.util.Set;
 
 public class ImmutableChoosableSetSerializer implements AdvancedExternalizer<ImmutableChoosableSet> {
 
-    private final static Set typeClasses = Util.asSet(ImmutableChoosableSetImpl.class, EmptyImmutableChoosableSet.class);
+    private final static Set typeClasses = Util.asSet(ImmutableChoosableSetImpl.class, ImmutableChoosableSetEmpty.class);
 
     @Override
     public Set<Class<? extends ImmutableChoosableSet>> getTypeClasses() {
@@ -55,7 +55,7 @@ public class ImmutableChoosableSetSerializer implements AdvancedExternalizer<Imm
     public ImmutableChoosableSet readObject(ObjectInput objectInput) throws IOException, ClassNotFoundException {
         Object o = objectInput.readObject();
         if (o == null) {
-            return EmptyImmutableChoosableSet.emptySet;
+            return ImmutableChoosableSetEmpty.emptySet;
         }
         return readObject(objectInput).add(o);
     }

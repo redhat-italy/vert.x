@@ -19,11 +19,11 @@ package org.vertx.java.spi.cluster.impl.infinispan.domain;
 import java.util.Collections;
 import java.util.Iterator;
 
-public class EmptyImmutableChoosableSet<T> implements ImmutableChoosableSet<T> {
+public class ImmutableChoosableSetEmpty<T> implements ImmutableChoosableSet<T> {
 
-    public static final ImmutableChoosableSet emptySet = new EmptyImmutableChoosableSet();
+    public static final ImmutableChoosableSet emptySet = new ImmutableChoosableSetEmpty();
 
-    private EmptyImmutableChoosableSet() {
+    private ImmutableChoosableSetEmpty() {
     }
 
     @Override

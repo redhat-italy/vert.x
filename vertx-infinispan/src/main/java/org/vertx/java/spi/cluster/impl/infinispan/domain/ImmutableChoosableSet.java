@@ -17,7 +17,6 @@
 package org.vertx.java.spi.cluster.impl.infinispan.domain;
 
 import io.vertx.core.spi.cluster.ChoosableIterable;
-import org.vertx.java.spi.cluster.impl.infinispan.domain.support.ElementNotFoundInSetException;
 
 public interface ImmutableChoosableSet<T> extends ChoosableIterable<T> {
 

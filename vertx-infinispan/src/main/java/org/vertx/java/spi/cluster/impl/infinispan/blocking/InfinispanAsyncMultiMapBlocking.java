@@ -51,6 +51,7 @@ public class InfinispanAsyncMultiMapBlocking<K, V> implements AsyncMultiMap<K, V
             ImmutableChoosableSet<V> oldValue = cache.get(k);
             if (oldValue != null) {
                 if (!cache.replace(k, oldValue, oldValue.add(v))) {
+                    log.error(String.format("Value changed during update for key [%s], retry []", k.toString()));
                     throw new RuntimeException("Value changed during update");
                 }
             } else {
