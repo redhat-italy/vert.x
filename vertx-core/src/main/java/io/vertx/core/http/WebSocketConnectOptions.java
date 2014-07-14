@@ -17,7 +17,7 @@
 package io.vertx.core.http;
 
 import io.vertx.core.MultiMap;
-import io.vertx.core.gen.Options;
+import io.vertx.codegen.annotations.Options;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -117,4 +117,27 @@ public class WebSocketConnectOptions extends RequestOptions {
     return this;
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof WebSocketConnectOptions)) return false;
+    if (!super.equals(o)) return false;
+
+    WebSocketConnectOptions that = (WebSocketConnectOptions) o;
+
+    if (maxWebsocketFrameSize != that.maxWebsocketFrameSize) return false;
+    if (version != that.version) return false;
+    if (subProtocols != null ? !subProtocols.equals(that.subProtocols) : that.subProtocols != null) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = super.hashCode();
+    result = 31 * result + maxWebsocketFrameSize;
+    result = 31 * result + version;
+    result = 31 * result + (subProtocols != null ? subProtocols.hashCode() : 0);
+    return result;
+  }
 }
