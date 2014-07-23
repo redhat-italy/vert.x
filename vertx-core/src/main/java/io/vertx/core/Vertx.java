@@ -54,18 +54,15 @@ import java.util.Set;
 @VertxGen
 public interface Vertx {
 
-  @GenIgnore
-  static Vertx newVertx() {
+  static Vertx vertx() {
     return factory.createVertx();
   }
 
-  @GenIgnore
-  static Vertx newVertx(VertxOptions options) {
+  static Vertx vertx(VertxOptions options) {
     return factory.createVertx(options);
   }
 
-  @GenIgnore
-  static void newVertx(VertxOptions options, Handler<AsyncResult<Vertx>> resultHandler) {
+  static void vertx(VertxOptions options, Handler<AsyncResult<Vertx>> resultHandler) {
     factory.createVertx(options, resultHandler);
   }
 
