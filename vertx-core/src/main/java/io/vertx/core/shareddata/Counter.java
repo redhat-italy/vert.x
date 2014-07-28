@@ -24,21 +24,19 @@ import io.vertx.core.Handler;
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
 @VertxGen
-public interface SharedData {
+public interface Counter {
 
-  <K, V> void getClusterWideMap(String name, Handler<AsyncResult<AsyncMap<K, V>>> resultHandler);
+  void get(Handler<AsyncResult<Long>> resultHandler);
 
-  void getLock(String name, Handler<AsyncResult<Lock>> resultHandler);
+  void incrementAndGet(Handler<AsyncResult<Long>> resultHandler);
 
-  void getLockWithTimeout(String name, long timeout, Handler<AsyncResult<Lock>> resultHandler);
+  void getAndIncrement(Handler<AsyncResult<Long>> resultHandler);
 
-  void getCounter(String name, Handler<AsyncResult<Counter>> resultHandler);
+  void decrementAndGet(Handler<AsyncResult<Long>> resultHandler);
 
-  /**
-   * Return a {@code Map} with the specific {@code name}. All invocations of this method with the same value of {@code name}
-   * are guaranteed to return the same {@code Map} instance. <p>
-   */
-  <K, V> LocalMap<K, V> getLocalMap(String name);
+  void addAndGet(long value, Handler<AsyncResult<Long>> resultHandler);
 
+  void getAndAdd(long value, Handler<AsyncResult<Long>> resultHandler);
 
+  void compareAndSet(long expected, long value, Handler<AsyncResult<Boolean>> resultHandler);
 }
