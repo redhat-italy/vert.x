@@ -126,17 +126,24 @@ public class DeploymentManager {
   }
 
   public void undeployAll(Handler<AsyncResult<Void>> completionHandler) {
+    // TODO timeout if it takes too long - e.g. async stop verticle fails to call future
     Set<String> deploymentIDs = new HashSet<>(deployments.keySet());
-    AtomicInteger count = new AtomicInteger(deploymentIDs.size());
-    for (String deploymentID: deploymentIDs) {
-      undeployVerticle(deploymentID, ar -> {
-        if (ar.failed()) {
-          log.error("Undeploy failed", ar.cause());
-        }
-        if (count.incrementAndGet() == deploymentIDs.size()) {
-          completionHandler.handle(new FutureResultImpl<>((Void)null));
-        }
-      });
+    if (!deploymentIDs.isEmpty()) {
+      AtomicInteger count = new AtomicInteger(0);
+      for (String deploymentID : deploymentIDs) {
+        undeployVerticle(deploymentID, ar -> {
+          if (ar.failed()) {
+            // Log but carry on regardless
+            log.error("Undeploy failed", ar.cause());
+          }
+          if (count.incrementAndGet() == deploymentIDs.size()) {
+            completionHandler.handle(new FutureResultImpl<>((Void) null));
+          }
+        });
+      }
+    } else {
+      Context context = vertx.getOrCreateContext();
+      context.runOnContext(v -> completionHandler.handle(new FutureResultImpl<>((Void)null)));
     }
   }
 
@@ -277,7 +284,6 @@ public class DeploymentManager {
     }
 
     public void doUndeploy(ContextImpl undeployingContext, Handler<AsyncResult<Void>> completionHandler) {
-
       if (!children.isEmpty()) {
         final int size = children.size();
         AtomicInteger childCount = new AtomicInteger();

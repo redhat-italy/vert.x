@@ -117,7 +117,7 @@ public class HttpServerImpl implements HttpServer, Closeable {
   private ContextImpl listenContext;
 
   public HttpServerImpl(VertxInternal vertx, HttpServerOptions options) {
-    this.options = new HttpServerOptions(options);
+    this.options = HttpServerOptions.copiedOptions(options);
     this.vertx = vertx;
     this.creatingContext = vertx.getContext();
     if (creatingContext != null) {
@@ -126,7 +126,7 @@ public class HttpServerImpl implements HttpServer, Closeable {
       }
       creatingContext.addCloseHook(this);
     }
-    this.sslHelper = new SSLHelper(options, KeyStoreHelper.create(vertx, options.getKeyStore()), KeyStoreHelper.create(vertx, options.getTrustStore()));
+    this.sslHelper = new SSLHelper(options, KeyStoreHelper.create(vertx, options.getKeyStoreOptions()), KeyStoreHelper.create(vertx, options.getTrustStoreOptions()));
   }
 
   @Override
