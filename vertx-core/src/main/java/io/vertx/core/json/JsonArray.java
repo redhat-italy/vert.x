@@ -34,9 +34,9 @@ import java.util.Map;
  */
 public class JsonArray extends JsonElement implements Iterable<Object> {
 
-  protected List<Object> list;
+  protected List list;
 
-  public JsonArray(List<Object> list) {
+  public JsonArray(List list) {
     this(list, true);
   }
 
@@ -44,7 +44,7 @@ public class JsonArray extends JsonElement implements Iterable<Object> {
     this(new ArrayList<>(Arrays.asList(array)), true);
   }
 
-  protected JsonArray(List<Object> list, boolean copy) {
+  protected JsonArray(List list, boolean copy) {
     this.list = copy ? convertList(list): list;
   }
 
@@ -181,27 +181,15 @@ public class JsonArray extends JsonElement implements Iterable<Object> {
   public boolean equals(Object o) {
     if (this == o)
       return true;
-
     if (o == null || getClass() != o.getClass())
       return false;
-
     JsonArray that = (JsonArray) o;
+    return list.equals(that.list);
+  }
 
-    if (this.list.size() != that.list.size())
-      return false;
-
-    Iterator<?> iter = that.list.iterator();
-    for (Object entry : this.list) {
-      Object other = iter.next();
-      if (entry == null) {
-        if (other != null) {
-          return false;
-        }
-      } else if (!entry.equals(other)) {
-        return false;
-      }
-    }
-    return true;
+  @Override
+  public int hashCode() {
+    return list.hashCode();
   }
 
   public Object[] toArray() {
@@ -217,7 +205,7 @@ public class JsonArray extends JsonElement implements Iterable<Object> {
     Object retVal = obj;
     if (obj != null) {
       if (obj instanceof List) {
-        retVal = new JsonArray((List<Object>) obj, false);
+        retVal = new JsonArray((List)obj, false);
       } else if (obj instanceof Map) {
         retVal = new JsonObject((Map<String, Object>) obj, false);
       }

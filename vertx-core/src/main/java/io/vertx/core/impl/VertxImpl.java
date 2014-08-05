@@ -86,7 +86,7 @@ public class VertxImpl implements VertxInternal {
   }
 
   private final FileSystem fileSystem = getFileSystem();
-  private final EventBus eventBus;
+  private EventBus eventBus;
   private final SharedData sharedData;
 
   private ExecutorService workerPool;
@@ -104,6 +104,7 @@ public class VertxImpl implements VertxInternal {
   private final ClusterManager clusterManager;
   private final DeploymentManager deploymentManager = new DeploymentManager(this);
   private boolean closed;
+  private HAManager haManager;
 
   VertxImpl() {
     this(VertxOptions.options());
@@ -118,24 +119,32 @@ public class VertxImpl implements VertxInternal {
     if (options.isClustered()) {
       this.clusterManager = getClusterManager(options);
       this.clusterManager.setVertx(this);
-      this.clusterManager.join();
-      Vertx inst = this;
-      this.eventBus = new EventBusImpl(this, options.getProxyOperationTimeout(), options.getClusterPort(), options.getClusterHost(), clusterManager, res -> {
-        if (resultHandler != null) {
-          if (res.succeeded()) {
-            resultHandler.handle(new FutureResultImpl<>(inst));
-          } else {
-            resultHandler.handle(new FutureResultImpl<>(res.cause()));
-          }
-        } else if (res.failed()) {
-          log.error("Failed to start event bus", res.cause());
+      this.clusterManager.join(ar -> {
+        if (ar.failed()) {
+          log.error("Failed to join cluster", ar.cause());
         }
+        if (options.isHAEnabled()) {
+          haManager = new HAManager(this, deploymentManager, clusterManager, options.getQuorumSize(), options.getHAGroup());
+        }
+        Vertx inst = this;
+        eventBus = new EventBusImpl(this, options.getProxyOperationTimeout(), options.getClusterPort(), options.getClusterHost(), clusterManager, res -> {
+          if (resultHandler != null) {
+            if (res.succeeded()) {
+              resultHandler.handle(new FutureResultImpl<>(inst));
+            } else {
+              resultHandler.handle(new FutureResultImpl<>(res.cause()));
+            }
+          } else if (res.failed()) {
+            log.error("Failed to start event bus", res.cause());
+          }
+        });
       });
     } else {
       this.clusterManager = null;
       this.eventBus = new EventBusImpl(this, options.getProxyOperationTimeout());
     }
     this.sharedData = new SharedDataImpl(this, clusterManager);
+
   }
 
   /**
@@ -325,11 +334,17 @@ public class VertxImpl implements VertxInternal {
   @Override
   public synchronized void close(Handler<AsyncResult<Void>> completionHandler) {
     if (closed) {
-      throw new IllegalStateException("Already closed");
+      runOnContext(v -> {
+        completionHandler.handle(new FutureResultImpl<>((Void)null));
+      });
     }
     closed = true;
     deploymentManager.undeployAll(ar -> {
+      if (haManager != null) {
+        haManager.stop();
+      }
       eventBus.close(ar2 -> {
+
         if (sharedHttpServers != null) {
           // Copy set to prevent ConcurrentModificationException
           for (HttpServer server : new HashSet<>(sharedHttpServers.values())) {
@@ -375,22 +390,12 @@ public class VertxImpl implements VertxInternal {
 
   @Override
   public void deployVerticleInstance(Verticle verticle) {
-    deploymentManager.deployVerticle(verticle, DeploymentOptions.options(), null);
-  }
-
-  @Override
-  public void deployVerticle(String verticleClass) {
-    deploymentManager.deployVerticle(verticleClass, DeploymentOptions.options(), null);
+    deployVerticleInstance(verticle, DeploymentOptions.options(), null);
   }
 
   @Override
   public void deployVerticleInstance(Verticle verticle, DeploymentOptions options) {
-    deploymentManager.deployVerticle(verticle, options, null);
-  }
-
-  @Override
-  public void deployVerticle(String verticleClass, DeploymentOptions options) {
-    deploymentManager.deployVerticle(verticleClass, options, null);
+    deployVerticleInstance(verticle, options, null);
   }
 
   @Override
@@ -399,12 +404,34 @@ public class VertxImpl implements VertxInternal {
   }
 
   @Override
-  public void deployVerticle(String verticleClass, DeploymentOptions options, Handler<AsyncResult<String>> completionHandler) {
-    deploymentManager.deployVerticle(verticleClass, options, completionHandler);
+  public void deployVerticle(String verticleName) {
+    deployVerticle(verticleName, DeploymentOptions.options(), null);    
+  }
+
+  @Override
+  public void deployVerticle(String verticleName, DeploymentOptions options) {
+    deployVerticle(verticleName, options, null);
+  }
+
+  @Override
+  public void deployVerticle(String verticleName, DeploymentOptions options, Handler<AsyncResult<String>> completionHandler) {
+    if (options.isHA() && haManager != null) {
+      haManager.deployVerticle(verticleName, options, completionHandler);
+    } else {
+      deploymentManager.deployVerticle(verticleName, options, completionHandler);
+    }
+  }
+
+  @Override
+  public String getNodeID() {
+    return clusterManager.getNodeID();
   }
 
   @Override
   public void undeployVerticle(String deploymentID, Handler<AsyncResult<Void>> completionHandler) {
+    if (haManager != null) {
+      haManager.removeFromHA(deploymentID);
+    }
     deploymentManager.undeployVerticle(deploymentID, completionHandler);
   }
 
@@ -432,6 +459,37 @@ public class VertxImpl implements VertxInternal {
   public <T> void executeBlocking(Action<T> action, Handler<AsyncResult<T>> resultHandler) {
     ContextImpl context = getOrCreateContext();
     context.executeBlocking(action, resultHandler);
+  }
+
+  // For testing
+  public void simulateKill() {
+    if (haManager != null) {
+      haManager.simulateKill();
+    }
+  }
+
+  @Override
+  public Deployment getDeployment(String deploymentID) {
+    return deploymentManager.getDeployment(deploymentID);
+  }
+
+  @Override
+  public void failoverCompleteHandler(Handler<Boolean> failoverCompleteHandler) {
+    if (haManager != null) {
+      haManager.failoverCompleteHandler(failoverCompleteHandler);
+    }
+  }
+
+  @Override
+  public boolean isKilled() {
+    return haManager.isKilled();
+  }
+
+  @Override
+  public void failDuringFailover(boolean fail) {
+    if (haManager != null) {
+      haManager.failDuringFailover(fail);
+    }
   }
 
   private void configurePools(VertxOptions options) {

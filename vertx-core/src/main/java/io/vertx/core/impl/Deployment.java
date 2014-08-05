@@ -17,7 +17,9 @@
 package io.vertx.core.impl;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
+import io.vertx.core.Verticle;
 
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
@@ -29,4 +31,12 @@ public interface Deployment {
   void undeploy(Handler<AsyncResult<Void>> completionHandler);
 
   void doUndeploy(ContextImpl undeployingContext, Handler<AsyncResult<Void>> completionHandler);
+
+  String verticleName();
+
+  DeploymentOptions deploymentOptions();
+
+  Verticle getVerticle();
+
+  boolean isChild();
 }

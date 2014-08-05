@@ -20,6 +20,8 @@ import io.vertx.codegen.annotations.Options;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.spi.DeploymentOptionsFactory;
 
+import java.util.List;
+
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
@@ -27,15 +29,15 @@ import io.vertx.core.spi.DeploymentOptionsFactory;
 public interface DeploymentOptions {
 
   static DeploymentOptions options() {
-    return factory.newOptions();
+    return factory.options();
   }
 
   static DeploymentOptions copiedOptions(DeploymentOptions other) {
-    return factory.copiedOptions(other);
+    return factory.options(other);
   }
 
   static DeploymentOptions optionsFromJson(JsonObject json) {
-    return factory.optionsFromJson(json);
+    return factory.options(json);
   }
 
   JsonObject getConfig();
@@ -53,6 +55,16 @@ public interface DeploymentOptions {
   String getIsolationGroup();
 
   DeploymentOptions setIsolationGroup(String isolationGroup);
+
+  JsonObject toJson();
+
+  boolean isHA();
+
+  DeploymentOptions setHA(boolean HA);
+
+  List<String> getExtraClasspath();
+
+  DeploymentOptions setExtraClasspath(List<String> extraClasspath);
 
   static final DeploymentOptionsFactory factory = ServiceHelper.loadFactory(DeploymentOptionsFactory.class);
 

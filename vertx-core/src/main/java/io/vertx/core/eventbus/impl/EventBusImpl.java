@@ -172,13 +172,30 @@ public class EventBusImpl implements EventBus {
 
   @Override
   public void close(Handler<AsyncResult<Void>> completionHandler) {
-		if (clusterMgr != null) {
-			clusterMgr.leave();
-		}
-		if (server != null) {
-			server.close(completionHandler);
-		} else if (completionHandler != null) {
-      vertx.runOnContext(v-> completionHandler.handle(new FutureResultImpl<>((Void)null)));
+    if (server != null) {
+      server.close(ar -> {
+        if (ar.failed()) {
+          log.error("Failed to close server", ar.cause());
+        }
+        closeClusterManager(completionHandler);
+      });
+    } else {
+      closeClusterManager(completionHandler);
+    }
+  }
+
+  private void closeClusterManager(Handler<AsyncResult<Void>> completionHandler) {
+    if (clusterMgr != null) {
+      clusterMgr.leave(ar -> {
+        if (ar.failed()) {
+          log.error("Failed to leave cluster", ar.cause());
+        }
+        if (completionHandler != null) {
+          vertx.runOnContext(v -> completionHandler.handle(new FutureResultImpl<>((Void) null)));
+        }
+      });
+    } else if (completionHandler != null) {
+      vertx.runOnContext(v -> completionHandler.handle(new FutureResultImpl<>((Void) null)));
     }
   }
 
@@ -689,15 +706,16 @@ public class EventBusImpl implements EventBus {
     @Override
     public boolean equals(Object o) {
       if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
       HandlerHolder that = (HandlerHolder) o;
-      return handler.equals(that.handler);
+      if (handler != null ? !handler.equals(that.handler) : that.handler != null) return false;
+      return true;
     }
 
     @Override
     public int hashCode() {
-      return handler.hashCode();
+      return handler != null ? handler.hashCode() : 0;
     }
-
   }
 
   private class ConnectionHolder {
@@ -792,6 +810,7 @@ public class EventBusImpl implements EventBus {
 
     @Override
     public boolean equals(Object o) {
+      if (o == null) return false;
       if (this == o) return true;
       if (getClass() != o.getClass()) return false;
       HandlerEntry entry = (HandlerEntry) o;

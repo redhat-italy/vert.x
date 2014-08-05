@@ -22,16 +22,22 @@ import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Verticle;
+import io.vertx.core.impl.verticle.SimpleJavaVerticleFactory;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.spi.VerticleFactory;
 
+import java.io.File;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
@@ -77,14 +83,14 @@ public class DeploymentManager {
   public void deployVerticle(Verticle verticle, DeploymentOptions options,
                              Handler<AsyncResult<String>> completionHandler) {
     ContextImpl currentContext = vertx.getOrCreateContext();
-    doDeploy(verticle, options, currentContext, completionHandler);
+    doDeploy("java:" + verticle.getClass().getName(), verticle, options, currentContext, completionHandler);
   }
 
   public void deployVerticle(String verticleName,
                              DeploymentOptions options,
                              Handler<AsyncResult<String>> completionHandler) {
     ContextImpl currentContext = vertx.getOrCreateContext();
-    ClassLoader cl = getClassLoader(options.getIsolationGroup());
+    ClassLoader cl = getClassLoader(options.getIsolationGroup(), options);
     int pos = verticleName.indexOf(':');
     if (pos == -1) {
       throw new IllegalArgumentException("verticleName must start with prefix");
@@ -104,7 +110,7 @@ public class DeploymentManager {
       if (verticle == null) {
         reportFailure(new NullPointerException("VerticleFactory::createVerticle returned null"), currentContext, completionHandler);
       } else {
-        doDeploy(verticle, options, currentContext, completionHandler);
+        doDeploy(verticleName, verticle, options, currentContext, completionHandler);
       }
     } catch (Exception e) {
       reportFailure(e, currentContext, completionHandler);
@@ -125,9 +131,20 @@ public class DeploymentManager {
     return Collections.unmodifiableSet(deployments.keySet());
   }
 
+  public Deployment getDeployment(String deploymentID) {
+    return deployments.get(deploymentID);
+  }
+
   public void undeployAll(Handler<AsyncResult<Void>> completionHandler) {
     // TODO timeout if it takes too long - e.g. async stop verticle fails to call future
-    Set<String> deploymentIDs = new HashSet<>(deployments.keySet());
+
+    // We only deploy the top level verticles as the children will be undeployed when the parent is
+    Set<String> deploymentIDs = new HashSet<>();
+    for (Map.Entry<String, Deployment> entry: deployments.entrySet()) {
+      if (!entry.getValue().isChild()) {
+        deploymentIDs.add(entry.getKey());
+      }
+    }
     if (!deploymentIDs.isEmpty()) {
       AtomicInteger count = new AtomicInteger(0);
       for (String deploymentID : deploymentIDs) {
@@ -167,7 +184,7 @@ public class DeploymentManager {
     return new HashSet<>(verticleFactories.values());
   }
 
-  private ClassLoader getClassLoader(String isolationGroup) {
+  private ClassLoader getClassLoader(String isolationGroup, DeploymentOptions options) {
     ClassLoader cl;
     if (isolationGroup == null) {
       cl = getCurrentClassLoader();
@@ -180,9 +197,24 @@ public class DeploymentManager {
             throw new IllegalStateException("Current classloader must be URLClassLoader");
           }
           URLClassLoader urlc = (URLClassLoader)current;
-          URL[] urls = urlc.getURLs();
+          List<URL> urls = new ArrayList<>();
+          // Add any extra URLs to the beginning of the classpath
+          List<String> extraClasspath = options.getExtraClasspath();
+          if (extraClasspath != null) {
+            for (String pathElement: extraClasspath) {
+              File file = new File(pathElement);
+              try {
+                URL url = file.toURI().toURL();
+                urls.add(url);
+              } catch (MalformedURLException e) {
+                throw new IllegalStateException(e);
+              }
+            }
+          }
+          // And add the URLs of the Vert.x classloader
+          urls.addAll(Arrays.asList(urlc.getURLs()));
           // Copy the URLS into the isolating classloader
-          cl = new IsolatingClassLoader(urls, getCurrentClassLoader());
+          cl = new IsolatingClassLoader(urls.toArray(new URL[urls.size()]), getCurrentClassLoader());
           classloaders.put(isolationGroup, cl);
         }
       }
@@ -223,7 +255,7 @@ public class DeploymentManager {
     });
   }
 
-  private void doDeploy(Verticle verticle, DeploymentOptions options,
+  private void doDeploy(String verticleName, Verticle verticle, DeploymentOptions options,
                         ContextImpl currentContext,
                         Handler<AsyncResult<String>> completionHandler) {
     if (options.isMultiThreaded() && !options.isWorker()) {
@@ -231,11 +263,12 @@ public class DeploymentManager {
     }
     ContextImpl context = options.isWorker() ? vertx.createWorkerContext(options.isMultiThreaded()) : vertx.createEventLoopContext();
     String deploymentID = UUID.randomUUID().toString();
-    DeploymentImpl deployment = new DeploymentImpl(deploymentID, context, verticle);
+    DeploymentImpl deployment = new DeploymentImpl(deploymentID, context, verticleName, verticle, options);
     context.setDeployment(deployment);
     Deployment parent = currentContext.getDeployment();
     if (parent != null) {
       parent.addChild(deployment);
+      deployment.child = true;
     }
     JsonObject conf = options.getConfig() == null ? null : options.getConfig().copy(); // Copy it
     context.runOnContext(v -> {
@@ -263,14 +296,19 @@ public class DeploymentManager {
 
     private final String id;
     private final ContextImpl context;
+    private final String verticleName;
     private final Verticle verticle;
     private final Set<Deployment> children = new ConcurrentHashSet<>();
+    private final DeploymentOptions options;
     private boolean undeployed;
+    private volatile boolean child;
 
-    private DeploymentImpl(String id, ContextImpl context, Verticle verticle) {
+    private DeploymentImpl(String id, ContextImpl context, String verticleName, Verticle verticle, DeploymentOptions options) {
       this.id = id;
       this.context = context;
+      this.verticleName = verticleName;
       this.verticle = verticle;
+      this.options = options;
     }
 
     @Override
@@ -326,63 +364,30 @@ public class DeploymentManager {
     }
 
     @Override
-    public void addChild(Deployment deployment) {
-      children.add(deployment);
-    }
-
-  }
-
-  /**
-   * Before delegating to the parent, this classloader attempts to load the class first
-   * (opposite of normal delegation model).
-   * This allows multiple versions of the same class to be loaded by different classloaders which allows
-   * us to isolate verticles so they can't easily interact
-   */
-  private static class IsolatingClassLoader extends URLClassLoader {
-
-    private IsolatingClassLoader(URL[] urls, ClassLoader parent) {
-      super(urls, parent);
+    public String verticleName() {
+      return verticleName;
     }
 
     @Override
-    protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
-      synchronized (getClassLoadingLock(name)) {
-        Class<?> c = findLoadedClass(name);
-        if (c == null) {
-          // We don't want to load Vert.x (or Vert.x dependency) classes from an isolating loader
-          if (isVertxOrSystemClass(name)) {
-            try {
-              c = super.loadClass(name, false);
-            } catch (ClassNotFoundException e) {
-              // Fall through
-            }
-          }
-          if (c == null) {
-            // Try and load with this classloader
-            try {
-              c = findClass(name);
-            } catch (ClassNotFoundException e) {
-              // Now try with parent
-              c = super.loadClass(name, false);
-            }
-          }
-        }
-        if (resolve) {
-          resolveClass(c);
-        }
-        return c;
-      }
+    public DeploymentOptions deploymentOptions() {
+      return options;
     }
 
-    private boolean isVertxOrSystemClass(String name) {
-      return
-        name.startsWith("java.") ||
-        name.startsWith("javax.") ||
-        name.startsWith("com.sun.") ||
-        name.startsWith("io.vertx.core") ||
-        name.startsWith("com.hazelcast") ||
-        name.startsWith("io.netty.");
+    @Override
+    public synchronized void addChild(Deployment deployment) {
+      children.add(deployment);
     }
+
+    @Override
+    public Verticle getVerticle() {
+      return verticle;
+    }
+
+    @Override
+    public boolean isChild() {
+      return child;
+    }
+
   }
 
 }
