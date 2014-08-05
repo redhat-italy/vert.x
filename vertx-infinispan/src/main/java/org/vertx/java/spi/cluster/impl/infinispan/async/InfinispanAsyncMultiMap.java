@@ -67,24 +67,24 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     }
 
     @Override
-    public void remove(final K k, final V v, final Handler<AsyncResult<Void>> handler) {
+    public void remove(K k, V v, Handler<AsyncResult<Boolean>> handler) {
         wrapper
                 .get(k,
                         (value) -> {
                             if (value != null) {
                                 if (value.isEmpty()) {
-                                    wrapper.remove(k,
-                                            (result) -> handler.handle(new FutureResultImpl<>((Void) null)),
+                                    wrapper.removeIfPresent(k,
+                                            (result) -> handler.handle(new FutureResultImpl<>(result)),
                                             (e) -> handler.handle(new FutureResultImpl<>(e))
                                     );
                                 } else {
-                                    wrapper.put(k, value.remove(v),
-                                            (result) -> handler.handle(new FutureResultImpl<>((Void) null)),
+                                    wrapper.replace(k, value, value.remove(v),
+                                            (result) -> handler.handle(new FutureResultImpl<>(result)),
                                             (e) -> handler.handle(new FutureResultImpl<>(e))
                                     );
                                 }
                             } else {
-                                handler.handle(new FutureResultImpl<>((Void) null));
+                                handler.handle(new FutureResultImpl<>(false));
                             }
                         },
                         (e) -> handler.handle(new FutureResultImpl<>(e))

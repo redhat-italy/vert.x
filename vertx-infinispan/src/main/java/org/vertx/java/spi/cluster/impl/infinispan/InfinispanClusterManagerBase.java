@@ -20,10 +20,11 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
+import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.shareddata.Counter;
-import io.vertx.core.spi.cluster.ClusterManager;
-import io.vertx.core.spi.cluster.NodeListener;
-import io.vertx.core.spi.cluster.VertxSPI;
+import io.vertx.core.shareddata.Lock;
+import io.vertx.core.shareddata.MapOptions;
+import io.vertx.core.spi.cluster.*;
 import org.infinispan.configuration.cache.CacheMode;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
@@ -37,6 +38,7 @@ import org.vertx.java.spi.cluster.impl.infinispan.listeners.CacheManagerListener
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public abstract class InfinispanClusterManagerBase implements ClusterManager {
 
@@ -76,6 +78,10 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
         return asyncConfiguration;
     }
 
+    protected <T> void execute(Action<T> action, Handler<AsyncResult<T>> handler) {
+        vertxSPI.executeBlocking(action, handler);
+    }
+
     @Override
     public final void setVertx(VertxSPI vertxSPI) {
         this.vertxSPI = vertxSPI;
@@ -84,10 +90,6 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
     @Override
     public final String getNodeID() {
         return cacheManager.getAddress().toString();
-    }
-
-    @Override
-    public void getCounter(String name, Handler<AsyncResult<Counter>> resultHandler) {
     }
 
     @Override
@@ -105,35 +107,63 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
     }
 
     @Override
-    public final synchronized void join() {
-        if (LOG.isDebugEnabled()) {
-            LOG.debug(String.format("JOIN [%s]", this.toString()));
-        }
-        if (active) {
-            return;
-        }
-        GlobalConfiguration globalConfiguration = new GlobalConfigurationBuilder()
-                .clusteredDefault()
-                .classLoader(GlobalConfiguration.class.getClassLoader())
-                .transport().addProperty("configurationFile", "jgroups-udp.xml")
-                .globalJmxStatistics().allowDuplicateDomains(true).enable()
-                .serialization().addAdvancedExternalizer(new ImmutableChoosableSetSerializer())
-                .build();
-        cacheManager = new DefaultCacheManager(globalConfiguration, asyncConfiguration);
-        cacheManager.start();
-        active = true;
+    public final void getLockWithTimeout(String name, long timeout, Handler<AsyncResult<Lock>> resultHandler) {
+        throw new UnsupportedOperationException("Not yet implemented.");
     }
 
     @Override
-    public final synchronized void leave() {
+    public final void getCounter(String name, Handler<AsyncResult<Counter>> resultHandler) {
+        throw new UnsupportedOperationException("Not yet implemented.");
+    }
+
+    @Override
+    public final <K, V> Map<K, V> getSyncMap(String name) {
+        getCacheManager().defineConfiguration(name, syncConfiguration);
+        return getCacheManager().<K, V>getCache(name, true);
+    }
+
+    @Override
+    public final boolean isActive() {
+        return active;
+    }
+
+    @Override
+    public final void join(Handler<AsyncResult<Void>> handler) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("JOIN [%s]", this.toString()));
+        }
+        vertxSPI.executeBlocking(() -> {
+            if (active) {
+                return null;
+            }
+
+            GlobalConfiguration globalConfiguration = new GlobalConfigurationBuilder()
+                    .clusteredDefault()
+                    .classLoader(GlobalConfiguration.class.getClassLoader())
+                    .transport().addProperty("configurationFile", "jgroups-udp.xml")
+                    .globalJmxStatistics().allowDuplicateDomains(true).enable()
+                    .serialization().addAdvancedExternalizer(new ImmutableChoosableSetSerializer())
+                    .build();
+            cacheManager = new DefaultCacheManager(globalConfiguration, asyncConfiguration);
+            cacheManager.start();
+            active = true;
+            return null;
+        }, handler);
+    }
+
+    @Override
+    public final void leave(Handler<AsyncResult<Void>> handler) {
         if (LOG.isDebugEnabled()) {
             LOG.debug(String.format("LEAVE Active[%s] [%s]", active, this.toString()));
         }
-        if (!active) {
-            return;
-        }
-        cacheManager.stop();
-        cacheManager = null;
-        active = false;
+        vertxSPI.executeBlocking(() -> {
+            if (!active) {
+                return null;
+            }
+            cacheManager.stop();
+            cacheManager = null;
+            active = false;
+            return null;
+        }, handler);
     }
 }

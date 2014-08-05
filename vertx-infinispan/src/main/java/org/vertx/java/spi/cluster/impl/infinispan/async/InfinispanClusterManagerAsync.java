@@ -16,33 +16,31 @@
 
 package org.vertx.java.spi.cluster.impl.infinispan.async;
 
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.impl.LoggerFactory;
-import io.vertx.core.spi.cluster.AsyncMap;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.shareddata.AsyncMap;
+import io.vertx.core.shareddata.MapOptions;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import org.infinispan.Cache;
 import org.vertx.java.spi.cluster.impl.infinispan.InfinispanClusterManagerBase;
 import org.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
 
-import java.util.Map;
-
 public class InfinispanClusterManagerAsync extends InfinispanClusterManagerBase {
 
+
     @Override
-    public <K, V> AsyncMultiMap<K, V> getAsyncMultiMap(String name) {
-        Cache<K, ImmutableChoosableSet<V>> cache = getCacheManager().<K, ImmutableChoosableSet<V>>getCache(name, true);
-        return new InfinispanAsyncMultiMap<>(cache);
+    public <K, V> void getAsyncMultiMap(String name, MapOptions options, Handler<AsyncResult<AsyncMultiMap<K, V>>> handler) {
+        execute(() -> {
+            Cache<K, ImmutableChoosableSet<V>> cache = getCacheManager().<K, ImmutableChoosableSet<V>>getCache(name, true);
+            return new InfinispanAsyncMultiMap<>(cache);
+        }, handler);
     }
 
     @Override
-    public <K, V> AsyncMap<K, V> getAsyncMap(String name) {
-        Cache<K, V> cache = getCacheManager().<K, V>getCache(name, true);
-        return new InfinispanAsyncMap<>(cache);
-    }
-
-    @Override
-    public <K, V> Map<K, V> getSyncMap(String name) {
-        getCacheManager().defineConfiguration(name, getSyncConfiguration());
-        return getCacheManager().<K, V>getCache(name, true);
+    public <K, V> void getAsyncMap(String name, MapOptions options, Handler<AsyncResult<AsyncMap<K, V>>> handler) {
+        execute(()->{
+            Cache<K, V> cache = getCacheManager().<K, V>getCache(name, true);
+            return new InfinispanAsyncMap<>(cache);
+        }, handler);
     }
 }

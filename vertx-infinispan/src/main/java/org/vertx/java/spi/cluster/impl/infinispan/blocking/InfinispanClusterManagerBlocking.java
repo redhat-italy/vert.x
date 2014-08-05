@@ -19,8 +19,6 @@ package org.vertx.java.spi.cluster.impl.infinispan.blocking;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.shareddata.AsyncMap;
-import io.vertx.core.shareddata.Counter;
-import io.vertx.core.shareddata.Lock;
 import io.vertx.core.shareddata.MapOptions;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import org.infinispan.Cache;
@@ -43,11 +41,6 @@ public class InfinispanClusterManagerBlocking extends InfinispanClusterManagerBa
             Cache<K, V> cache = getCacheManager().<K, V>getCache(name, true);
             return new InfinispanAsyncMapBlocking<>(getVertxSPI(), cache);
         }, handler);
-    }
-
-    @Override
-    public void getLockWithTimeout(String name, long timeout, Handler<AsyncResult<Lock>> resultHandler) {
-
     }
 
 }

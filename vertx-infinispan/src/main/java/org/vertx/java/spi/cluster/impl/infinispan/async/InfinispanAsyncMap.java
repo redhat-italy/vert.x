@@ -19,7 +19,7 @@ package org.vertx.java.spi.cluster.impl.infinispan.async;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.impl.FutureResultImpl;
-import io.vertx.core.spi.cluster.AsyncMap;
+import io.vertx.core.shareddata.AsyncMap;
 import org.infinispan.Cache;
 import org.vertx.java.spi.cluster.impl.infinispan.helpers.CacheAsyncWrapper;
 
@@ -50,10 +50,55 @@ public class InfinispanAsyncMap<K, V> implements AsyncMap<K, V> {
     }
 
     @Override
-    public void remove(final K k, Handler<AsyncResult<Void>> handler) {
+    public void putIfAbsent(K k, V v, Handler<AsyncResult<V>> handler) {
+        wrapper
+                .putIfAbsent(k, v,
+                        (value) -> handler.handle(new FutureResultImpl<>(value)),
+                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                );
+    }
+
+    @Override
+    public void remove(K k, Handler<AsyncResult<V>> handler) {
         wrapper
                 .remove(k,
-                        (value) -> handler.handle(new FutureResultImpl<>((Void) null)),
+                        (value) -> handler.handle(new FutureResultImpl<>(value)),
+                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                );
+    }
+
+    @Override
+    public void removeIfPresent(K k, V v, Handler<AsyncResult<Boolean>> handler) {
+        wrapper
+                .removeIfPresent(k,
+                        (value) -> handler.handle(new FutureResultImpl<>(value)),
+                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                );
+    }
+
+    @Override
+    public void replace(K k, V v, Handler<AsyncResult<V>> handler) {
+        wrapper
+                .replace(k, v,
+                        (value) -> handler.handle(new FutureResultImpl(value)),
+                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                );
+    }
+
+    @Override
+    public void replaceIfPresent(K k, V oldValue, V newValue, Handler<AsyncResult<Boolean>> handler) {
+        wrapper
+                .replace(k, oldValue, newValue,
+                        (value) -> handler.handle(new FutureResultImpl(value)),
+                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                );
+    }
+
+    @Override
+    public void clear(Handler<AsyncResult<Void>> handler) {
+        wrapper
+                .clear(
+                        (v) -> handler.handle(new FutureResultImpl<>(v)),
                         (e) -> handler.handle(new FutureResultImpl<>(e))
                 );
     }
