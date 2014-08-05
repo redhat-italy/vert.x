@@ -46,6 +46,20 @@ public class InfinispanAsyncMultiMapBlocking<K, V> implements AsyncMultiMap<K, V
     }
 
     @Override
+    public void remove(K k, V v, Handler<AsyncResult<Boolean>> completionHandler) {
+        vertx.executeBlocking(() -> {
+            ImmutableChoosableSet<V> oldValue = cache.get(k);
+            if (oldValue != null) {
+                if (cache.replace(k, oldValue, oldValue.remove(v))) {
+                    log.debug("Value changed during update");
+                    return false;
+                }
+            }
+            return true;
+        }, completionHandler);
+    }
+
+    @Override
     public void add(final K k, final V v, final Handler<AsyncResult<Void>> completionHandler) {
         vertx.executeBlocking(() -> {
             ImmutableChoosableSet<V> oldValue = cache.get(k);
@@ -56,19 +70,6 @@ public class InfinispanAsyncMultiMapBlocking<K, V> implements AsyncMultiMap<K, V
                 }
             } else {
                 cache.put(k, new ImmutableChoosableSetImpl<V>(v));
-            }
-            return null;
-        }, completionHandler);
-    }
-
-    @Override
-    public void remove(final K k, final V v, Handler<AsyncResult<Void>> completionHandler) {
-        vertx.executeBlocking(() -> {
-            ImmutableChoosableSet<V> oldValue = cache.get(k);
-            if (oldValue != null) {
-                if (cache.replace(k, oldValue, oldValue.remove(v))) {
-                    throw new RuntimeException("Value changed during update");
-                }
             }
             return null;
         }, completionHandler);

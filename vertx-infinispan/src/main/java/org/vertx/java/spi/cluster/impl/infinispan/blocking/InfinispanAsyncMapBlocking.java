@@ -18,38 +18,66 @@ package org.vertx.java.spi.cluster.impl.infinispan.blocking;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-import io.vertx.core.spi.cluster.AsyncMap;
+import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.spi.cluster.VertxSPI;
 import org.infinispan.Cache;
 
 public class InfinispanAsyncMapBlocking<K, V> implements AsyncMap<K, V> {
 
     private VertxSPI vertx;
-    private Cache<K, V> cache;
+    private Cache<K, V> map;
 
-    public InfinispanAsyncMapBlocking(VertxSPI vertx, Cache<K, V> cache) {
+    public InfinispanAsyncMapBlocking(VertxSPI vertx, Cache<K, V> map) {
         this.vertx = vertx;
-        this.cache = cache;
+        this.map = map;
     }
 
     @Override
-    public void get(final K k, Handler<AsyncResult<V>> asyncResultHandler) {
-        vertx.executeBlocking(() -> cache.get(k), asyncResultHandler);
+    public void get(K k, Handler<AsyncResult<V>> asyncResultHandler) {
+        vertx.executeBlocking(() -> map.get(k), asyncResultHandler);
     }
 
     @Override
     public void put(final K k, final V v, Handler<AsyncResult<Void>> completionHandler) {
         vertx.executeBlocking(() -> {
-            cache.put(k, v);
+            map.put(k, v);
             return null;
         }, completionHandler);
     }
 
     @Override
-    public void remove(final K k, Handler<AsyncResult<Void>> completionHandler) {
+    public void putIfAbsent(K k, V v, Handler<AsyncResult<V>> completionHandler) {
         vertx.executeBlocking(() -> {
-            cache.remove(k);
-            return null;
+            map.putIfAbsent(k, v);
+            return v;
         }, completionHandler);
+    }
+
+    @Override
+    public void remove(final K k, Handler<AsyncResult<V>> resultHandler) {
+        vertx.executeBlocking(() -> map.remove(k), resultHandler);
+    }
+
+    @Override
+    public void removeIfPresent(K k, V v, Handler<AsyncResult<Boolean>> resultHandler) {
+        vertx.executeBlocking(() -> map.remove(k, v), resultHandler);
+    }
+
+    @Override
+    public void replace(K k, V v, Handler<AsyncResult<V>> resultHandler) {
+        vertx.executeBlocking(() -> map.replace(k, v), resultHandler);
+    }
+
+    @Override
+    public void replaceIfPresent(K k, V oldValue, V newValue, Handler<AsyncResult<Boolean>> resultHandler) {
+        vertx.executeBlocking(() -> map.replace(k, oldValue, newValue), resultHandler);
+    }
+
+    @Override
+    public void clear(Handler<AsyncResult<Void>> resultHandler) {
+        vertx.executeBlocking(() -> {
+            map.clear();
+            return null;
+        }, resultHandler);
     }
 }

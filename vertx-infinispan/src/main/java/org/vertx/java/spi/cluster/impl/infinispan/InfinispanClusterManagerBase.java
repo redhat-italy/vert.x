@@ -16,8 +16,11 @@
 
 package org.vertx.java.spi.cluster.impl.infinispan;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
+import io.vertx.core.shareddata.Counter;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.core.spi.cluster.NodeListener;
 import io.vertx.core.spi.cluster.VertxSPI;
@@ -81,6 +84,10 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
     @Override
     public final String getNodeID() {
         return cacheManager.getAddress().toString();
+    }
+
+    @Override
+    public void getCounter(String name, Handler<AsyncResult<Counter>> resultHandler) {
     }
 
     @Override

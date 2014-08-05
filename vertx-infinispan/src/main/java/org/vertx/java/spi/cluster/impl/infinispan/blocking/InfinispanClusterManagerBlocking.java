@@ -16,47 +16,38 @@
 
 package org.vertx.java.spi.cluster.impl.infinispan.blocking;
 
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.impl.LoggerFactory;
-import io.vertx.core.spi.cluster.*;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.shareddata.AsyncMap;
+import io.vertx.core.shareddata.Counter;
+import io.vertx.core.shareddata.Lock;
+import io.vertx.core.shareddata.MapOptions;
+import io.vertx.core.spi.cluster.AsyncMultiMap;
 import org.infinispan.Cache;
-import org.infinispan.configuration.cache.CacheMode;
-import org.infinispan.configuration.cache.Configuration;
-import org.infinispan.configuration.cache.ConfigurationBuilder;
-import org.infinispan.configuration.global.GlobalConfiguration;
-import org.infinispan.configuration.global.GlobalConfigurationBuilder;
-import org.infinispan.manager.DefaultCacheManager;
-import org.infinispan.manager.EmbeddedCacheManager;
-import org.infinispan.remoting.transport.Address;
 import org.vertx.java.spi.cluster.impl.infinispan.InfinispanClusterManagerBase;
-import org.vertx.java.spi.cluster.impl.infinispan.async.InfinispanAsyncMap;
-import org.vertx.java.spi.cluster.impl.infinispan.async.InfinispanAsyncMultiMap;
 import org.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
-import org.vertx.java.spi.cluster.impl.infinispan.domain.serializer.ImmutableChoosableSetSerializer;
-import org.vertx.java.spi.cluster.impl.infinispan.listeners.CacheManagerListener;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 public class InfinispanClusterManagerBlocking extends InfinispanClusterManagerBase {
 
     @Override
-    public <K, V> AsyncMultiMap<K, V> getAsyncMultiMap(String name) {
-        Cache<K, ImmutableChoosableSet<V>> cache = getCacheManager().<K, ImmutableChoosableSet<V>>getCache(name, true);
-        return new InfinispanAsyncMultiMapBlocking<>(getVertxSPI(), cache);
+    public <K, V> void getAsyncMultiMap(String name, MapOptions options, Handler<AsyncResult<AsyncMultiMap<K, V>>> handler) {
+        getVertxSPI().executeBlocking(() -> {
+            Cache<K, ImmutableChoosableSet<V>> cache = getCacheManager().<K, ImmutableChoosableSet<V>>getCache(name, true);
+            return new InfinispanAsyncMultiMapBlocking<>(getVertxSPI(), cache);
+        }, handler);
     }
 
     @Override
-    public <K, V> AsyncMap<K, V> getAsyncMap(String name) {
-        Cache<K, V> cache = getCacheManager().<K, V>getCache(name, true);
-        return new InfinispanAsyncMapBlocking<>(getVertxSPI(), cache);
+    public <K, V> void getAsyncMap(String name, MapOptions options, Handler<AsyncResult<AsyncMap<K, V>>> handler) {
+        getVertxSPI().executeBlocking(() -> {
+            Cache<K, V> cache = getCacheManager().<K, V>getCache(name, true);
+            return new InfinispanAsyncMapBlocking<>(getVertxSPI(), cache);
+        }, handler);
     }
 
     @Override
-    public <K, V> Map<K, V> getSyncMap(String name) {
-        getCacheManager().defineConfiguration(name, getSyncConfiguration());
-        return getCacheManager().<K, V>getCache(name, true);
+    public void getLockWithTimeout(String name, long timeout, Handler<AsyncResult<Lock>> resultHandler) {
+
     }
 
 }
