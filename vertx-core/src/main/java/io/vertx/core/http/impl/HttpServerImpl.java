@@ -46,6 +46,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
+import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.vertx.core.AsyncResult;
@@ -216,6 +217,9 @@ public class HttpServerImpl implements HttpServer, Closeable {
               if (sslHelper.isSSL() || options.isCompressionSupported()) {
                 // only add ChunkedWriteHandler when SSL is enabled otherwise it is not needed as FileRegion is used.
                 pipeline.addLast("chunkedWriter", new ChunkedWriteHandler());       // For large file / sendfile support
+              }
+              if (options.getIdleTimeout() > 0) {
+                pipeline.addLast("idle", new IdleStateHandler(0, 0, options.getIdleTimeout()));
               }
               pipeline.addLast("handler", new ServerHandler());
             }
@@ -467,7 +471,7 @@ public class HttpServerImpl implements HttpServer, Closeable {
             if (reqHandler != null) {
               // We need to set the context manually as this is executed directly, not via context.execute()
               vertx.setContext(reqHandler.context);
-              conn = new ServerConnection(vertx, HttpServerImpl.this, ch, reqHandler.context, serverOrigin);
+              conn = new ServerConnection(vertx, HttpServerImpl.this, ch, reqHandler.context, serverOrigin, null);
               conn.requestHandler(reqHandler.handler);
               connectionMap.put(ch, conn);
               conn.handleMessage(msg);
@@ -581,7 +585,8 @@ public class HttpServerImpl implements HttpServer, Closeable {
           throw new IllegalArgumentException("Invalid uri " + request.getUri()); //Should never happen
         }
 
-        final ServerConnection wsConn = new ServerConnection(vertx, HttpServerImpl.this, ch, wsHandler.context, serverOrigin);
+        final ServerConnection wsConn = new ServerConnection(vertx, HttpServerImpl.this, ch, wsHandler.context,
+                                                             serverOrigin, shake);
         wsConn.wsHandler(wsHandler.handler);
 
         Runnable connectRunnable = () -> {
