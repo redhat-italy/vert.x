@@ -17,17 +17,15 @@
 package io.vertx.test.core.blocking;
 
 import io.vertx.core.spi.cluster.ClusterManager;
-import io.vertx.java.spi.cluster.impl.infinispan.blocking.InfinispanClusterManagerBlocking;
-import io.vertx.test.core.ClusterWideMapTestDifferentNodes;
+import io.vertx.java.spi.cluster.impl.infinispan.blocking.InfinispanBlockingClusterManager;
 import io.vertx.test.core.ClusteredAsynchronousLockTest;
-import io.vertx.test.core.ClusteredEventBusTest;
 import org.junit.Test;
 
 public class InfinispanBlockingClusteredAsynchronousLockTest extends ClusteredAsynchronousLockTest {
 
     @Override
     protected ClusterManager getClusterManager() {
-        return new InfinispanClusterManagerBlocking();
+        return new InfinispanBlockingClusterManager();
     }
 
     @Test

@@ -17,9 +17,9 @@
 package io.vertx.test.core.async;
 
 import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.java.spi.cluster.impl.infinispan.async.InfinispanAsyncClusterManager;
 import io.vertx.test.core.ClusteredEventBusTest;
 import org.junit.Test;
-import io.vertx.java.spi.cluster.impl.infinispan.async.InfinispanClusterManagerAsync;
 
 public class InfinispanAsyncClusteredEventbusTest extends ClusteredEventBusTest {
 
@@ -29,7 +29,7 @@ public class InfinispanAsyncClusteredEventbusTest extends ClusteredEventBusTest 
 
     @Override
     protected ClusterManager getClusterManager() {
-        return new InfinispanClusterManagerAsync();
+        return new InfinispanAsyncClusterManager();
     }
 
     @Test

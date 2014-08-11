@@ -18,12 +18,12 @@ package io.vertx.java.spi.cluster.impl.infinispan.async;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-import io.vertx.core.impl.FutureResultImpl;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ChoosableIterable;
 import io.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
+import io.vertx.java.spi.cluster.impl.infinispan.helpers.HandlerHelper;
 import org.infinispan.Cache;
 import io.vertx.java.spi.cluster.impl.infinispan.helpers.CacheAsyncWrapper;
 
@@ -40,54 +40,60 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
     @Override
     public void get(final K k, final Handler<AsyncResult<ChoosableIterable<V>>> handler) {
+        HandlerHelper<ChoosableIterable<V>> helper = new HandlerHelper<>(handler);
+
         wrapper
                 .get(k,
-                        (value) -> handler.handle(new FutureResultImpl<>(value)),
-                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                        helper::success,
+                        helper::error
                 );
     }
 
     @Override
     public void add(final K k, final V v, final Handler<AsyncResult<Void>> handler) {
+        HandlerHelper<Void> helper = new HandlerHelper<>(handler);
+
         wrapper
                 .get(k,
                         (value) -> {
                             if (value != null) {
                                 wrapper
                                         .put(k, value.add(v),
-                                                (result) -> handler.handle(new FutureResultImpl<>((Void) null)),
-                                                (e) -> handler.handle(new FutureResultImpl<>(e))
+                                                (newValue) -> helper.success(null),
+                                                helper::error
                                         );
                             } else {
-                                handler.handle(new FutureResultImpl<>((Void) null));
+                                helper.success(null);
                             }
                         },
-                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                        helper::error
                 );
     }
 
     @Override
     public void remove(K k, V v, Handler<AsyncResult<Boolean>> handler) {
+        HandlerHelper<Boolean> helper = new HandlerHelper<>(handler);
+
         wrapper
                 .get(k,
                         (value) -> {
                             if (value != null) {
                                 if (value.isEmpty()) {
                                     wrapper.removeIfPresent(k,
-                                            (result) -> handler.handle(new FutureResultImpl<>(result)),
-                                            (e) -> handler.handle(new FutureResultImpl<>(e))
+                                            helper::success,
+                                            helper::error
                                     );
                                 } else {
                                     wrapper.replace(k, value, value.remove(v),
-                                            (result) -> handler.handle(new FutureResultImpl<>(result)),
-                                            (e) -> handler.handle(new FutureResultImpl<>(e))
+                                            helper::success,
+                                            helper::error
                                     );
                                 }
                             } else {
-                                handler.handle(new FutureResultImpl<>(false));
+                                helper.success(false);
                             }
                         },
-                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                        helper::error
                 );
     }
 

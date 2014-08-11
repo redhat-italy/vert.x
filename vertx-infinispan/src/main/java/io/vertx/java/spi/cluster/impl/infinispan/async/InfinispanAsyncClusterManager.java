@@ -25,7 +25,7 @@ import io.vertx.java.spi.cluster.impl.infinispan.InfinispanClusterManagerBase;
 import org.infinispan.Cache;
 import io.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
 
-public class InfinispanClusterManagerAsync extends InfinispanClusterManagerBase {
+public class InfinispanAsyncClusterManager extends InfinispanClusterManagerBase {
 
 
     @Override

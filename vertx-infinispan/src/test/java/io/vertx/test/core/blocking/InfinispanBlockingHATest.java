@@ -17,8 +17,7 @@
 package io.vertx.test.core.blocking;
 
 import io.vertx.core.spi.cluster.ClusterManager;
-import io.vertx.java.spi.cluster.impl.infinispan.blocking.InfinispanClusterManagerBlocking;
-import io.vertx.test.core.ClusteredEventBusTest;
+import io.vertx.java.spi.cluster.impl.infinispan.blocking.InfinispanBlockingClusterManager;
 import io.vertx.test.core.HATest;
 import org.junit.Test;
 
@@ -26,7 +25,7 @@ public class InfinispanBlockingHATest extends HATest {
 
     @Override
     protected ClusterManager getClusterManager() {
-        return new InfinispanClusterManagerBlocking();
+        return new InfinispanBlockingClusterManager();
     }
 
     @Test

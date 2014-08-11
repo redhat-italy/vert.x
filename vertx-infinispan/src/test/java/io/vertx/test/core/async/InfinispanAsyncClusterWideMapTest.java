@@ -17,16 +17,15 @@
 package io.vertx.test.core.async;
 
 import io.vertx.core.spi.cluster.ClusterManager;
-import io.vertx.java.spi.cluster.impl.infinispan.async.InfinispanClusterManagerAsync;
+import io.vertx.java.spi.cluster.impl.infinispan.async.InfinispanAsyncClusterManager;
 import io.vertx.test.core.ClusterWideMapTestDifferentNodes;
-import io.vertx.test.core.ComplexHATest;
 import org.junit.Test;
 
 public class InfinispanAsyncClusterWideMapTest extends ClusterWideMapTestDifferentNodes {
 
     @Override
     protected ClusterManager getClusterManager() {
-        return new InfinispanClusterManagerAsync();
+        return new InfinispanAsyncClusterManager();
     }
 
     @Test

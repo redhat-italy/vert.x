@@ -25,7 +25,7 @@ import io.vertx.java.spi.cluster.impl.infinispan.InfinispanClusterManagerBase;
 import io.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
 import org.infinispan.Cache;
 
-public class InfinispanClusterManagerBlocking extends InfinispanClusterManagerBase {
+public class InfinispanBlockingClusterManager extends InfinispanClusterManagerBase {
 
     @Override
     public <K, V> void getAsyncMultiMap(String name, MapOptions options, Handler<AsyncResult<AsyncMultiMap<K, V>>> handler) {

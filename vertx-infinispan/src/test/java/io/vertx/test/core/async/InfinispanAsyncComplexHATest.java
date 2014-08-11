@@ -17,16 +17,15 @@
 package io.vertx.test.core.async;
 
 import io.vertx.core.spi.cluster.ClusterManager;
-import io.vertx.java.spi.cluster.impl.infinispan.async.InfinispanClusterManagerAsync;
+import io.vertx.java.spi.cluster.impl.infinispan.async.InfinispanAsyncClusterManager;
 import io.vertx.test.core.ComplexHATest;
-import io.vertx.test.core.HATest;
 import org.junit.Test;
 
 public class InfinispanAsyncComplexHATest extends ComplexHATest {
 
     @Override
     protected ClusterManager getClusterManager() {
-        return new InfinispanClusterManagerAsync();
+        return new InfinispanAsyncClusterManager();
     }
 
     @Test

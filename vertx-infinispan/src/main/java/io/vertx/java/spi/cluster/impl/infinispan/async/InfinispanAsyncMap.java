@@ -18,8 +18,8 @@ package io.vertx.java.spi.cluster.impl.infinispan.async;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-import io.vertx.core.impl.FutureResultImpl;
 import io.vertx.core.shareddata.AsyncMap;
+import io.vertx.java.spi.cluster.impl.infinispan.helpers.HandlerHelper;
 import org.infinispan.Cache;
 import io.vertx.java.spi.cluster.impl.infinispan.helpers.CacheAsyncWrapper;
 
@@ -33,73 +33,90 @@ public class InfinispanAsyncMap<K, V> implements AsyncMap<K, V> {
 
     @Override
     public void get(final K k, Handler<AsyncResult<V>> handler) {
+        HandlerHelper<V> helper = new HandlerHelper<>(handler);
+
         wrapper
                 .get(k,
-                        (value) -> handler.handle(new FutureResultImpl<>(value)),
-                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                        helper::success,
+                        helper::error
                 );
     }
 
     @Override
     public void put(final K k, final V v, Handler<AsyncResult<Void>> handler) {
+        HandlerHelper<Void> helper = new HandlerHelper<>(handler);
+
         wrapper
                 .put(k, v,
-                        (value) -> handler.handle(new FutureResultImpl<>((Void) null)),
-                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                        (value) -> helper.success(null),
+                        helper::error
                 );
     }
 
     @Override
     public void putIfAbsent(K k, V v, Handler<AsyncResult<V>> handler) {
+        HandlerHelper<V> helper = new HandlerHelper<>(handler);
+
         wrapper
                 .putIfAbsent(k, v,
-                        (value) -> handler.handle(new FutureResultImpl<>(value)),
-                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                        helper::success,
+                        helper::error
                 );
     }
 
     @Override
     public void remove(K k, Handler<AsyncResult<V>> handler) {
+        HandlerHelper<V> helper = new HandlerHelper<>(handler);
+
         wrapper
                 .remove(k,
-                        (value) -> handler.handle(new FutureResultImpl<>(value)),
-                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                        helper::success,
+                        helper::error
                 );
     }
 
     @Override
     public void removeIfPresent(K k, V v, Handler<AsyncResult<Boolean>> handler) {
+        HandlerHelper<Boolean> helper = new HandlerHelper<>(handler);
+
         wrapper
                 .removeIfPresent(k,
-                        (value) -> handler.handle(new FutureResultImpl<>(value)),
-                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                        helper::success,
+                        helper::error
                 );
     }
 
     @Override
     public void replace(K k, V v, Handler<AsyncResult<V>> handler) {
+        HandlerHelper<V> helper = new HandlerHelper<>(handler);
+
         wrapper
                 .replace(k, v,
-                        (value) -> handler.handle(new FutureResultImpl(value)),
-                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                        helper::success,
+                        helper::error
                 );
     }
 
     @Override
     public void replaceIfPresent(K k, V oldValue, V newValue, Handler<AsyncResult<Boolean>> handler) {
+        HandlerHelper<Boolean> helper = new HandlerHelper<>(handler);
+
         wrapper
                 .replace(k, oldValue, newValue,
-                        (value) -> handler.handle(new FutureResultImpl(value)),
-                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                        helper::success,
+                        helper::error
                 );
     }
 
     @Override
     public void clear(Handler<AsyncResult<Void>> handler) {
+        HandlerHelper<Void> helper = new HandlerHelper<>(handler);
+
         wrapper
                 .clear(
-                        (v) -> handler.handle(new FutureResultImpl<>(v)),
-                        (e) -> handler.handle(new FutureResultImpl<>(e))
+                        helper::success,
+                        helper::error
                 );
     }
+
 }

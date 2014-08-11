@@ -14,21 +14,25 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.test.core.blocking;
+package io.vertx.java.spi.cluster.impl.infinispan.helpers;
 
-import io.vertx.core.spi.cluster.ClusterManager;
-import io.vertx.java.spi.cluster.impl.infinispan.blocking.InfinispanBlockingClusterManager;
-import io.vertx.test.core.ClusteredEventBusTest;
-import org.junit.Test;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
 
-public class InfinispanBlockingClusteredEventbusTest extends ClusteredEventBusTest {
+public class HandlerHelper<V> {
 
-    @Override
-    protected ClusterManager getClusterManager() {
-        return new InfinispanBlockingClusterManager();
+    private Handler<AsyncResult<V>> handler;
+
+    public HandlerHelper(Handler<AsyncResult<V>> handler) {
+        this.handler = handler;
     }
 
-    @Test
-    public void testFoo() {
+    public final void success(V value) {
+        handler.handle(Future.completedFuture(value));
+    }
+
+    public final void error(Throwable e) {
+        handler.handle(Future.completedFuture(e));
     }
 }
