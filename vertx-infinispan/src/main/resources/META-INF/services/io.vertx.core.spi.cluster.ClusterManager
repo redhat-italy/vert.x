@@ -1,1 +1,1 @@
-org.vertx.java.spi.cluster.impl.infinispan.async.InfinispanClusterManagerAsync
+io.vertx.java.spi.cluster.impl.infinispan.async.InfinispanClusterManagerAsync
