@@ -22,7 +22,10 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.shareddata.Counter;
 import io.vertx.core.shareddata.Lock;
+import io.vertx.core.shareddata.MapOptions;
 import io.vertx.core.spi.cluster.*;
+import io.vertx.java.spi.cluster.impl.infinispan.domain.InfinispanCounterImpl;
+import io.vertx.java.spi.cluster.impl.infinispan.helpers.HandlerHelper;
 import io.vertx.java.spi.cluster.impl.infinispan.listeners.CacheManagerListener;
 import org.infinispan.configuration.cache.CacheMode;
 import org.infinispan.configuration.cache.Configuration;
@@ -110,8 +113,16 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
     }
 
     @Override
-    public final void getCounter(String name, Handler<AsyncResult<Counter>> resultHandler) {
-        throw new UnsupportedOperationException("Not yet implemented.");
+    public final void getCounter(String name, Handler<AsyncResult<Counter>> handler) {
+        HandlerHelper<Counter> helper = new HandlerHelper<>(handler);
+
+        this.<String, Long>getAsyncMap(InfinispanCounterImpl.COUNTER_CACHE_NAME, null, (cache) -> {
+            if(cache.succeeded()) {
+                helper.success(new InfinispanCounterImpl(name, cache.result()));
+            } else {
+                helper.error(cache.cause());
+            }
+        });
     }
 
     @Override

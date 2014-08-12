@@ -20,6 +20,9 @@ import io.vertx.java.spi.cluster.impl.infinispan.callback.Callback;
 import org.infinispan.Cache;
 import org.infinispan.commons.util.concurrent.NotifyingFuture;
 
+import java.util.function.Predicate;
+import java.util.stream.Stream;
+
 public class CacheAsyncWrapper<K1, V1> {
 
     private final Cache<K1, V1> cache;
