@@ -28,6 +28,7 @@ import io.vertx.core.file.FileSystemProps;
 import io.vertx.core.file.OpenOptions;
 import io.vertx.core.file.impl.AsyncFileImpl;
 import io.vertx.core.impl.Windows;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.streams.Pump;
 import io.vertx.core.streams.ReadStream;
 import io.vertx.core.streams.WriteStream;
@@ -878,7 +879,7 @@ public class FileSystemTest extends VertxTestBase {
       if (ar.failed()) {
         fail(ar.cause().getMessage());
       } else {
-        assertTrue(TestUtils.buffersEqual(Buffer.buffer(content), ar.result()));
+        assertEquals(Buffer.buffer(content), ar.result());
         testComplete();
       }
     });
@@ -903,7 +904,7 @@ public class FileSystemTest extends VertxTestBase {
           fail(e.getMessage());
           return;
         }
-        assertTrue(TestUtils.buffersEqual(buff, Buffer.buffer(readBytes)));
+        assertEquals(buff, Buffer.buffer(readBytes));
         testComplete();
       }
     });
@@ -939,7 +940,7 @@ public class FileSystemTest extends VertxTestBase {
                       return;
                     }
                     Buffer read = Buffer.buffer(readBytes);
-                    assertTrue(TestUtils.buffersEqual(buff, read));
+                    assertEquals(buff, read);
                     testComplete();
                   }
                 });
@@ -976,7 +977,7 @@ public class FileSystemTest extends VertxTestBase {
                   if (ar.failed()) {
                     fail(ar.cause().getMessage());
                   } else {
-                    assertTrue(TestUtils.buffersEqual(expected, buff));
+                    assertEquals(expected, buff);
                     assertEquals(buff, arb.result());
                     testComplete();
                   }
@@ -1022,7 +1023,7 @@ public class FileSystemTest extends VertxTestBase {
               fail(e.getMessage());
               return;
             }
-            assertTrue(TestUtils.buffersEqual(buff, Buffer.buffer(readBytes)));
+            assertEquals(buff, Buffer.buffer(readBytes));
             testComplete();
           }
         });
@@ -1059,7 +1060,7 @@ public class FileSystemTest extends VertxTestBase {
               fail(e.getMessage());
               return;
             }
-            assertTrue(TestUtils.buffersEqual(buff, Buffer.buffer(readBytes)));
+            assertEquals(buff, Buffer.buffer(readBytes));
             byteBuf.release();
             testComplete();
           }
@@ -1089,7 +1090,7 @@ public class FileSystemTest extends VertxTestBase {
             if (ar2.failed()) {
               fail(ar2.cause().getMessage());
             } else {
-              assertTrue(TestUtils.buffersEqual(buff, Buffer.buffer(content)));
+              assertEquals(buff, Buffer.buffer(content));
               testComplete();
             }
           });
@@ -1137,7 +1138,7 @@ public class FileSystemTest extends VertxTestBase {
                         fail(e.getMessage());
                         return;
                       }
-                      assertTrue(TestUtils.buffersEqual(Buffer.buffer(content), Buffer.buffer(readBytes)));
+                      assertEquals(Buffer.buffer(content), Buffer.buffer(readBytes));
                       testComplete();
                     }
                   });
@@ -1290,6 +1291,22 @@ public class FileSystemTest extends VertxTestBase {
     assertFalse(opts.isSparse());
     assertEquals(opts, opts.setSparse(true));
     assertTrue(opts.isSparse());
+  }
+
+  @Test
+  public void testDefaultOptionOptions() {
+    OpenOptions def = OpenOptions.options();
+    OpenOptions json = OpenOptions.optionsFromJson(new JsonObject());
+    assertEquals(def.getPerms(), json.getPerms());
+    assertEquals(def.isRead(), json.isRead());
+    assertEquals(def.isWrite(), json.isWrite());
+    assertEquals(def.isCreate(), json.isCreate());
+    assertEquals(def.isCreateNew(), json.isCreateNew());
+    assertEquals(def.isDeleteOnClose(), json.isDeleteOnClose());
+    assertEquals(def.isTruncateExisting(), json.isTruncateExisting());
+    assertEquals(def.isSparse(), json.isSparse());
+    assertEquals(def.isSync(), json.isSync());
+    assertEquals(def.isDSync(), json.isDSync());
   }
 
   private AsyncResultHandler<Void> createHandler(boolean shouldPass, Handler<Void> afterOK) {

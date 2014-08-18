@@ -68,7 +68,7 @@ import java.util.function.Consumer;
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
-public class NetTest extends VertxTestBase {
+public class NetTest extends NetTestBase {
 
   private NetServer server;
   private NetClient client;
@@ -446,6 +446,15 @@ public class NetTest extends VertxTestBase {
   }
 
   @Test
+  public void testDefaultClientOptionsJson() {
+    NetClientOptions def = NetClientOptions.options();
+    NetClientOptions json = NetClientOptions.optionsFromJson(new JsonObject());
+    assertEquals(def.getReconnectAttempts(), json.getReconnectAttempts());
+    assertEquals(def.getReconnectInterval(), json.getReconnectInterval());
+    testDefaultClientOptions(def, json);
+  }
+
+  @Test
   public void testClientOptionsJson() {
     int sendBufferSize = TestUtils.randomPositiveInt();
     int receiverBufferSize = TestUtils.randomPortInt();
@@ -622,6 +631,19 @@ public class NetTest extends VertxTestBase {
   }
 
   @Test
+  public void testDefaultServerOptionsJson() {
+    NetServerOptions def = NetServerOptions.options();
+    NetServerOptions json = NetServerOptions.optionsFromJson(new JsonObject());
+    assertEquals(def.isClientAuthRequired(), json.isClientAuthRequired());
+    assertEquals(def.getCrlPaths(), json.getCrlPaths());
+    assertEquals(def.getCrlValues(), json.getCrlValues());
+    assertEquals(def.getAcceptBacklog(), json.getAcceptBacklog());
+    assertEquals(def.getPort(), json.getPort());
+    assertEquals(def.getHost(), json.getHost());
+    testDefaultNetServerOptionsBase(def, json);
+  }
+
+  @Test
   public void testServerOptionsJson() {
     int sendBufferSize = TestUtils.randomPositiveInt();
     int receiverBufferSize = TestUtils.randomPortInt();
@@ -728,14 +750,14 @@ public class NetTest extends VertxTestBase {
   @Test
   public void testEchoBytes() {
     Buffer sent = TestUtils.randomBuffer(100);
-    testEcho(sock -> sock.writeBuffer(sent), buff -> TestUtils.buffersEqual(sent, buff), sent.length());
+    testEcho(sock -> sock.writeBuffer(sent), buff -> assertEquals(sent, buff), sent.length());
   }
 
   @Test
   public void testEchoString() {
     String sent = TestUtils.randomUnicodeString(100);
     Buffer buffSent = Buffer.buffer(sent);
-    testEcho(sock -> sock.writeString(sent), buff -> TestUtils.buffersEqual(buffSent, buff), buffSent.length());
+    testEcho(sock -> sock.writeString(sent), buff -> assertEquals(buffSent, buff), buffSent.length());
   }
 
   @Test
@@ -751,7 +773,7 @@ public class NetTest extends VertxTestBase {
   void testEchoStringWithEncoding(String encoding) {
     String sent = TestUtils.randomUnicodeString(100);
     Buffer buffSent = Buffer.buffer(sent, encoding);
-    testEcho(sock -> sock.writeString(sent, encoding), buff -> TestUtils.buffersEqual(buffSent, buff), buffSent.length());
+    testEcho(sock -> sock.writeString(sent, encoding), buff -> assertEquals(buffSent, buff), buffSent.length());
   }
 
   void testEcho(Consumer<NetSocket> writer, Consumer<Buffer> dataChecker, int length) {
@@ -1206,7 +1228,7 @@ public class NetTest extends VertxTestBase {
           socket.dataHandler(buffer -> {
             received.appendBuffer(buffer);
             if (received.length() == sent.length()) {
-              TestUtils.buffersEqual(sent, received);
+              assertEquals(sent, received);
               testComplete();
             }
             if (startTLS && !upgradedClient.get()) {
@@ -1463,7 +1485,7 @@ public class NetTest extends VertxTestBase {
       sock.dataHandler(buff -> {
         received.appendBuffer(buff);
         if (received.length() == expected.length()) {
-          assertTrue(TestUtils.buffersEqual(expected, received));
+          assertEquals(expected, received);
           testComplete();
         }
       });
@@ -1504,7 +1526,7 @@ public class NetTest extends VertxTestBase {
         sock.dataHandler(buff -> {
           received.appendBuffer(buff);
           if (received.length() == expected.length()) {
-            assertTrue(TestUtils.buffersEqual(expected, received));
+            assertEquals(expected, received);
             testComplete();
           }
         });
@@ -1702,7 +1724,7 @@ public class NetTest extends VertxTestBase {
               sock.dataHandler(rec -> {
                 received.appendBuffer(rec);
                 if (received.length() == buff.length()) {
-                  assertTrue(TestUtils.buffersEqual(buff, received));
+                  assertEquals(buff, received);
                   latch.countDown();
                 }
               });
@@ -1784,7 +1806,7 @@ public class NetTest extends VertxTestBase {
       }
     }
     MyVerticle verticle = new MyVerticle();
-    vertx.deployVerticleInstance(verticle, DeploymentOptions.options().setWorker(worker));
+    vertx.deployVerticleWithOptions(verticle, DeploymentOptions.options().setWorker(worker));
     await();
   }
 
@@ -1809,7 +1831,7 @@ public class NetTest extends VertxTestBase {
       }
     }
     MyVerticle verticle = new MyVerticle();
-    vertx.deployVerticleInstance(verticle, DeploymentOptions.options().setWorker(true).setMultiThreaded(true));
+    vertx.deployVerticleWithOptions(verticle, DeploymentOptions.options().setWorker(true).setMultiThreaded(true));
     await();
   }
 

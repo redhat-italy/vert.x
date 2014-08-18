@@ -1,17 +1,17 @@
 /*
- * Copyright (c) 2011-2014 The original author or authors
- * ------------------------------------------------------
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * and Apache License v2.0 which accompanies this distribution.
+ * Copyright 2014 Red Hat, Inc.
  *
- *     The Eclipse Public License is available at
- *     http://www.eclipse.org/legal/epl-v10.html
+ *   Red Hat licenses this file to you under the Apache License, version 2.0
+ *   (the "License"); you may not use this file except in compliance with the
+ *   License.  You may obtain a copy of the License at:
  *
- *     The Apache License v2.0 is available at
- *     http://www.opensource.org/licenses/apache2.0.php
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * You may elect to redistribute this code under either of these licenses.
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ *   License for the specific language governing permissions and limitations
+ *   under the License.
  */
 
 package io.vertx.core.eventbus;
@@ -19,10 +19,24 @@ package io.vertx.core.eventbus;
 import io.vertx.core.buffer.Buffer;
 
 /**
- * @author <a href="mailto:nscavell@redhat.com">Nick Scavelli</a>
+ *
+ * Instances of this class must be stateless as they will be used concurrently.
+ *
+ * @author <a href="http://tfox.org">Tim Fox</a>
  */
-public interface MessageCodec<T> {
-  Buffer encode(T object);
+public interface MessageCodec<S, R> {
 
-  T decode(Buffer buffer);
+  // Called when object is encoded to wire
+  void encodeToWire(Buffer buffer, S s);
+
+  // Called when object is decoded from wire
+  R decodeFromWire(int pos, Buffer buffer);
+
+  // Used when sending locally and no wire involved
+  // Must, at least, make a copy of the message if it is not immutable
+  R transform(S s);
+
+  String name();
+
+  byte systemCodecID();
 }

@@ -16,8 +16,8 @@
 
 package io.vertx.core.http.impl;
 
-import io.vertx.core.MultiMap;
-import io.vertx.core.http.CaseInsensitiveMultiMap;
+import io.vertx.core.Headers;
+import io.vertx.core.http.CaseInsensitiveHeaders;
 import io.vertx.core.http.WebSocketConnectOptions;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -39,7 +39,7 @@ public class WebSocketConnectOptionsImpl implements WebSocketConnectOptions {
 
   private int port ;
   private String host;
-  private MultiMap headers;
+  private Headers headers;
   private String requestURI;
   private int maxWebsocketFrameSize;
   private int version;
@@ -71,7 +71,7 @@ public class WebSocketConnectOptionsImpl implements WebSocketConnectOptions {
     if (obj == null) {
       headers = null;
     } else {
-      headers = new CaseInsensitiveMultiMap();
+      headers = new CaseInsensitiveHeaders();
       obj.toMap().forEach((k, v) -> {
         headers.set(k, (String)v);
       });
@@ -79,7 +79,10 @@ public class WebSocketConnectOptionsImpl implements WebSocketConnectOptions {
     this.maxWebsocketFrameSize = json.getInteger("maxWebsocketFrameSize", DEFAULT_MAXWEBSOCKETFRAMESIZE);
     this.version = json.getInteger("version", DEFAULT_WEBSOCKETVERSION);
     JsonArray arr = json.getArray("subProtocols");
-    this.subProtocols = arr == null ? null : new HashSet<String>(arr.toList());
+    this.subProtocols = new HashSet<>();
+    if (arr != null) {
+      subProtocols.addAll(arr.toList());
+    }
   }
 
   @Override
@@ -108,12 +111,12 @@ public class WebSocketConnectOptionsImpl implements WebSocketConnectOptions {
   }
 
   @Override
-  public MultiMap getHeaders() {
+  public Headers getHeaders() {
     return headers;
   }
 
   @Override
-  public WebSocketConnectOptions setHeaders(MultiMap headers) {
+  public WebSocketConnectOptions setHeaders(Headers headers) {
     this.headers = headers;
     return this;
   }
@@ -130,7 +133,7 @@ public class WebSocketConnectOptionsImpl implements WebSocketConnectOptions {
   }
 
   @Override
-  public WebSocketConnectOptions putHeader(CharSequence name, CharSequence value) {
+  public WebSocketConnectOptions addHeader(CharSequence name, CharSequence value) {
     if (name == null) {
       throw new NullPointerException("name");
     }
@@ -138,7 +141,7 @@ public class WebSocketConnectOptionsImpl implements WebSocketConnectOptions {
       throw new NullPointerException("value");
     }
     if (headers == null) {
-      headers = new CaseInsensitiveMultiMap();
+      headers = new CaseInsensitiveHeaders();
     }
     headers.add(name, value);
     return this;

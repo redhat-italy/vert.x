@@ -16,9 +16,11 @@
 
 package io.vertx.test.core;
 
-import io.vertx.core.MultiMap;
+
+import io.vertx.core.Future;
+import io.vertx.core.Headers;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.CaseInsensitiveMultiMap;
+import io.vertx.core.http.CaseInsensitiveHeaders;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpServer;
@@ -50,7 +52,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
-public class WebsocketTest extends VertxTestBase {
+public class WebsocketTest extends NetTestBase {
 
   private HttpClient client;
   private HttpServer server;
@@ -536,7 +538,7 @@ public class WebsocketTest extends VertxTestBase {
     String randString = TestUtils.randomUnicodeString(100);
     assertEquals(options, options.setHost(randString));
     assertEquals(randString, options.getHost());
-    MultiMap headers = new CaseInsensitiveMultiMap();
+    Headers headers = new CaseInsensitiveHeaders();
     assertNull(options.getHeaders());
     assertEquals(options, options.setHeaders(headers));
     assertSame(headers, options.getHeaders());
@@ -544,7 +546,7 @@ public class WebsocketTest extends VertxTestBase {
     assertEquals("/", options.getRequestURI());
     assertEquals(options, options.setRequestURI(randString));
     assertEquals(randString, options.getRequestURI());
-    options.putHeader("foo", "bar");
+    options.addHeader("foo", "bar");
     assertNotNull(options.getHeaders());
     assertEquals("bar", options.getHeaders().get("foo"));
     assertEquals(65536, options.getMaxWebsocketFrameSize());
@@ -579,7 +581,7 @@ public class WebsocketTest extends VertxTestBase {
   public void testCopyOptions() {
     int port = 4523;
     String host = TestUtils.randomAlphaString(100);
-    MultiMap headers = new CaseInsensitiveMultiMap();
+    Headers headers = new CaseInsensitiveHeaders();
     headers.add("foo", "bar");
     String uri = TestUtils.randomAlphaString(100);
     int websocketFrameSize = TestUtils.randomPositiveInt();
@@ -600,10 +602,20 @@ public class WebsocketTest extends VertxTestBase {
   }
 
   @Test
+  public void testDefaultWebSocketConnectOptionsJson() {
+    WebSocketConnectOptions def = WebSocketConnectOptions.options();
+    WebSocketConnectOptions json = WebSocketConnectOptions.optionsFromJson(new JsonObject());
+    assertEquals(def.getMaxWebsocketFrameSize(), json.getMaxWebsocketFrameSize());
+    assertEquals(def.getVersion(), json.getVersion());
+    assertEquals(def.getSubProtocols(), json.getSubProtocols());
+    testDefaultRequestOptionsBaseJson(def, json);
+  }
+
+  @Test
   public void testCopyOptionsJson() {
     int port = 4523;
     String host = TestUtils.randomAlphaString(100);
-    MultiMap headers = new CaseInsensitiveMultiMap();
+    Headers headers = new CaseInsensitiveHeaders();
     headers.add("foo", "bar");
     String uri = TestUtils.randomAlphaString(100);
     int websocketFrameSize = TestUtils.randomPositiveInt();
@@ -650,10 +662,10 @@ public class WebsocketTest extends VertxTestBase {
     String tmp = secHeader + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
     String encoded = sha1(tmp);
     sock.writeString("HTTP/1.1 101 Web Socket Protocol Handshake\r\n" +
-      "Upgrade: WebSocket\r\n" +
-      "Connection: Upgrade\r\n" +
-      "Sec-WebSocket-Accept: " + encoded + "\r\n" +
-      "\r\n");
+        "Upgrade: WebSocket\r\n" +
+        "Connection: Upgrade\r\n" +
+        "Sec-WebSocket-Accept: " + encoded + "\r\n" +
+        "\r\n");
     return sock;
   }
 
@@ -759,7 +771,7 @@ public class WebsocketTest extends VertxTestBase {
           if (received.size() == msgs) {
             int pos = 0;
             for (Buffer rec: received) {
-              TestUtils.buffersEqual(rec, sent.get(pos++));
+              assertEquals(rec, sent.get(pos++));
             }
             testComplete();
           }
@@ -857,7 +869,7 @@ public class WebsocketTest extends VertxTestBase {
         ws.dataHandler(data -> {
           received.appendBuffer(data);
           if (received.length() == buff.length()) {
-            assertTrue(TestUtils.buffersEqual(buff, received));
+            assertEquals(buff, received);
             ws.close();
             testComplete();
           }
@@ -882,7 +894,7 @@ public class WebsocketTest extends VertxTestBase {
         ws.dataHandler(data -> {
           received.appendBuffer(data);
           if (received.length() == buff.length()) {
-            assertTrue(TestUtils.buffersEqual(buff, received));
+            assertEquals(buff, received);
             ws.close();
             testComplete();
           }
@@ -908,7 +920,7 @@ public class WebsocketTest extends VertxTestBase {
         ws.dataHandler(data -> {
           received.appendBuffer(data);
           if (received.length() == buff.length()) {
-            assertTrue(TestUtils.buffersEqual(buff, received));
+            assertEquals(buff, received);
             ws.close();
             testComplete();
           }
@@ -931,6 +943,77 @@ public class WebsocketTest extends VertxTestBase {
       assertTrue(ar.succeeded());
       client.exceptionHandler(t -> testComplete());
       client.connectWebsocket(WebSocketConnectOptions.options().setPort(HttpTestBase.DEFAULT_HTTP_PORT).setRequestURI(path).setVersion(version), ws -> fail("Should not be called"));
+    });
+    await();
+  }
+
+/*
+  Those 3 tests cannot pass for the moment due to a bug in Netty for websocket version 0:
+  https://github.com/netty/netty/issues/2768
+
+  @Test
+  public void testWriteMessageHybi00() {
+    testWriteMessage(256, 0);
+  }
+
+  @Test
+  public void testWriteFragmentedMessage2Hybi00() {
+    testWriteMessage(65536 + 256, 0);
+  }
+
+  @Test
+  public void testWriteFragmentedMessage2Hybi00() {
+    testWriteMessage(65536 + 65536 + 256, 0);
+  }
+*/
+
+  @Test
+  public void testWriteMessageHybi08() {
+    testWriteMessage(256, 8);
+  }
+
+  @Test
+  public void testWriteFragmentedMessage1Hybi08() {
+    testWriteMessage(65536 + 256, 8);
+  }
+
+  @Test
+  public void testWriteFragmentedMessage2Hybi08() {
+    testWriteMessage(65536 + 65536 + 256, 8);
+  }
+
+  @Test
+  public void testWriteMessageHybi17() {
+    testWriteMessage(256, 13);
+  }
+
+  @Test
+  public void testWriteFragmentedMessage1Hybi17() {
+    testWriteMessage(65536 + 256, 13);
+  }
+
+  @Test
+  public void testWriteFragmentedMessage2Hybi17() {
+    testWriteMessage(65536 + 65536 + 256, 13);
+  }
+
+  private void testWriteMessage(int size, int version) {
+    String path = "/some/path";
+    byte[] expected = TestUtils.randomByteArray(size);
+    server = vertx.createHttpServer(HttpServerOptions.options().setPort(HttpTestBase.DEFAULT_HTTP_PORT)).websocketHandler(ws -> {
+      ws.writeMessage(Buffer.buffer(expected));
+      ws.close();
+    });
+    server.listen(ar -> {
+      assertTrue(ar.succeeded());
+      client.connectWebsocket(WebSocketConnectOptions.options().setPort(HttpTestBase.DEFAULT_HTTP_PORT).setRequestURI(path).setVersion(version), ws -> {
+        Buffer actual = Buffer.buffer();
+        ws.dataHandler(actual::appendBuffer);
+        ws.closeHandler(v -> {
+          assertArrayEquals(expected, actual.getBytes());
+          testComplete();
+        });
+      });
     });
     await();
   }
