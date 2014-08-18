@@ -38,7 +38,7 @@ public class ImmutableChoosableSetImpl<T> implements ImmutableChoosableSet<T> {
     public ImmutableChoosableSet<T> add(T value) {
         checkSanity(value);
 
-        return new ImmutableChoosableSetImpl<T>(value, this);
+        return new ImmutableChoosableSetImpl<>(value, this);
     }
 
     @Override

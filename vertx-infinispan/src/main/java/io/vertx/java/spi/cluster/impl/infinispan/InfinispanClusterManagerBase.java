@@ -117,8 +117,6 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
     public final void getCounter(String name, Handler<AsyncResult<Counter>> handler) {
         HandlerHelper<Counter> helper = new HandlerHelper<>(handler);
 
-
-
         this.<String, Long>getAsyncMap(InfinispanCounterImpl.COUNTER_CACHE_NAME, null, (cache) -> {
             if(cache.succeeded()) {
                 helper.success(new InfinispanCounterImpl(name, cache.result()));

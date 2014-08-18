@@ -24,7 +24,10 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.spi.cluster.NodeListener;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Listener(primaryOnly = true, sync = true)
 public class CacheManagerListener {
@@ -41,17 +44,17 @@ public class CacheManagerListener {
     public void viewChangedEvent(ViewChangedEvent event) {
         List<Address> oldMembers = event.getOldMembers();
         List<Address> newMembers = event.getNewMembers();
-        for (Address member : newMembers) {
-            if (!oldMembers.contains(member)) {
-                LOG.info(String.format("EVENT: ADDED MEMBER [%s]", member));
-                nodeListener.nodeAdded(member.toString());
-            }
-        }
-        for (Address member : oldMembers) {
-            if (!newMembers.contains(member)) {
-                LOG.info(String.format("EVENT: REMOVED MEMBER [%s]", member));
-                nodeListener.nodeLeft(member.toString());
-            }
-        }
+
+        newMembers.stream()
+                .filter((member) -> !oldMembers.contains(member))
+                .map(Address::toString)
+                .peek((member) -> LOG.info(String.format("EVENT: ADDED MEMBER [%s]", member)))
+                .forEach(nodeListener::nodeAdded);
+
+        oldMembers.stream()
+                .filter((member) -> !newMembers.contains(member))
+                .map(Address::toString)
+                .peek((member) -> LOG.info(String.format("EVENT: REMOVED MEMBER [%s]", member)))
+                .forEach(nodeListener::nodeLeft);
     }
 }

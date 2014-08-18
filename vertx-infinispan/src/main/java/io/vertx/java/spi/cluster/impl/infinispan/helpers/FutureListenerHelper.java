@@ -16,34 +16,35 @@
 
 package io.vertx.java.spi.cluster.impl.infinispan.helpers;
 
-import io.vertx.java.spi.cluster.impl.infinispan.callback.Callback;
 import org.infinispan.commons.util.concurrent.FutureListener;
 
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
 
 public class FutureListenerHelper<T> implements FutureListener<T> {
 
-    private Callback<Exception> onError;
-    private Callback<T> onSuccess;
+    private Optional<Consumer<Exception>> onError;
+    private Optional<Consumer<T>> onSuccess;
 
-    public FutureListenerHelper(Callback<T> onSuccess, Callback<Exception> onError) {
-        if (onError == null || onSuccess == null) {
-            throw new IllegalArgumentException("Callback onError and OnSuccess must have a value");
-        }
-        this.onSuccess = onSuccess;
-        this.onError = onError;
+    public FutureListenerHelper(Consumer<T> onSuccess, Consumer<Exception> onError) {
+        this.onSuccess = Optional.of(onSuccess);
+        this.onError = Optional.of(onError);
     }
 
     @Override
     public void futureDone(Future<T> future) {
         if (future.isDone()) {
-            try {
-                this.onSuccess.execute(future.get());
-            } catch (Exception e) {
-                this.onError.execute(e);
-            }
+            this.onSuccess.ifPresent((consumer) -> {
+                try {
+                    consumer.accept(future.get());
+                } catch (InterruptedException | ExecutionException cause) {
+                    this.onError.ifPresent((error) -> error.accept(cause));
+                }
+            });
         } else {
-            this.onError.execute(null);
+            this.onError.ifPresent((consumer) -> consumer.accept(null));
         }
     }
 

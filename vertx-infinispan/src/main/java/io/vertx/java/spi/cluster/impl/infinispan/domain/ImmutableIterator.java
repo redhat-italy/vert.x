@@ -37,10 +37,7 @@ public class ImmutableIterator<T> implements Iterator<T> {
 
     @Override
     public boolean hasNext() {
-        if(!onNextIterator) {
-            return true;
-        }
-        return nextIterator.hasNext();
+        return (!onNextIterator) || nextIterator.hasNext();
     }
 
     @Override
