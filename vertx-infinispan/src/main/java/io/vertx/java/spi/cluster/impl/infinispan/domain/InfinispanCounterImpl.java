@@ -19,6 +19,8 @@ package io.vertx.java.spi.cluster.impl.infinispan.domain;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.shareddata.Counter;
 import io.vertx.java.spi.cluster.impl.infinispan.helpers.HandlerHelper;
@@ -27,16 +29,22 @@ import java.util.function.*;
 
 public class InfinispanCounterImpl implements Counter {
 
+    public final static Logger log = LoggerFactory.getLogger(InfinispanCounterImpl.class);
+
     public final static String COUNTER_CACHE_NAME = "__counter__vertx";
 
     private String name;
     private AsyncMap<String, Long> cache;
 
-    private UnaryOperator<Long> next = (a) -> a + 1;
-
     public InfinispanCounterImpl(String name, AsyncMap<String, Long> cache) {
         this.name = name;
         this.cache = cache;
+
+        this.cache.putIfAbsent(name, 0L, (handler)-> {
+            if(handler.failed()) {
+                log.error("Counter initialization failed.", handler.cause());
+            }
+        });
     }
 
     @Override
