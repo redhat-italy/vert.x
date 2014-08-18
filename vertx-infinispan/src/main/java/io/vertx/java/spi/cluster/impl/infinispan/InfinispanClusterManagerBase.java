@@ -37,9 +37,9 @@ import org.infinispan.manager.EmbeddedCacheManager;
 import org.infinispan.remoting.transport.Address;
 import io.vertx.java.spi.cluster.impl.infinispan.domain.serializer.ImmutableChoosableSetSerializer;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public abstract class InfinispanClusterManagerBase implements ClusterManager {
 
@@ -95,11 +95,12 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
 
     @Override
     public final List<String> getNodes() {
-        ArrayList<String> nodes = new ArrayList<>();
-        for (Address address : cacheManager.getMembers()) {
-            nodes.add(address.toString());
-        }
-        return nodes;
+        return Optional
+                .ofNullable(cacheManager.getMembers())
+                .orElse(Collections.emptyList())
+                .stream()
+                .map(Address::toString)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -115,6 +116,8 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
     @Override
     public final void getCounter(String name, Handler<AsyncResult<Counter>> handler) {
         HandlerHelper<Counter> helper = new HandlerHelper<>(handler);
+
+
 
         this.<String, Long>getAsyncMap(InfinispanCounterImpl.COUNTER_CACHE_NAME, null, (cache) -> {
             if(cache.succeeded()) {
