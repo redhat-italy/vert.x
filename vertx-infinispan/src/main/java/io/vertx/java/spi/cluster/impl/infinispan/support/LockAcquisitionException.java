@@ -14,28 +14,12 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.java.spi.cluster.impl.infinispan.helpers;
+package io.vertx.java.spi.cluster.impl.infinispan.support;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
+public class LockAcquisitionException extends Throwable {
 
-public class HandlerHelper<V> {
+    public final static LockAcquisitionException INSTANCE = new LockAcquisitionException();
 
-    private Handler<AsyncResult<V>> handler;
-
-    public HandlerHelper(Handler<AsyncResult<V>> handler) {
-        this.handler = handler;
-    }
-
-    public final void success(V value) {
-        handler.handle(Future.completedFuture(value));
-    }
-
-    public final void error(Throwable e) {
-        handler.handle(Future.completedFuture(e));
-    }
-    public final void fail() {
-        handler.handle(Future.completedFuture());
+    private LockAcquisitionException() {
     }
 }

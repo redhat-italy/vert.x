@@ -14,28 +14,15 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.java.spi.cluster.impl.infinispan.helpers;
+package io.vertx.java.spi.cluster.impl.infinispan;
 
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.shareddata.Lock;
 
-public class HandlerHelper<V> {
+public interface PermitsManager {
 
-    private Handler<AsyncResult<V>> handler;
+    void acquireLock(long timeout, Handler<AsyncResult<Lock>> lock);
 
-    public HandlerHelper(Handler<AsyncResult<V>> handler) {
-        this.handler = handler;
-    }
-
-    public final void success(V value) {
-        handler.handle(Future.completedFuture(value));
-    }
-
-    public final void error(Throwable e) {
-        handler.handle(Future.completedFuture(e));
-    }
-    public final void fail() {
-        handler.handle(Future.completedFuture());
-    }
+    void releaseLock(Lock lock);
 }
