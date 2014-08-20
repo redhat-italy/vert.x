@@ -14,24 +14,5 @@
  *   under the License.
  */
 
-package io.vertx.test.core;
-
-import io.vertx.core.spi.cluster.ClusterManager;
-import io.vertx.spi.cluster.impl.hazelcast.HazelcastClusterManager;
-
-/**
- * @author <a href="http://tfox.org">Tim Fox</a>
- */
-public class HazelcastHATest extends HATest {
-
-  static {
-    System.setProperty("hazelcast.wait.seconds.before.join", "0");
-    System.setProperty("hazelcast.local.localAddress", "127.0.0.1");
-  }
-
-  @Override
-  protected ClusterManager getClusterManager() {
-    return new HazelcastClusterManager();
-  }
-
-}
+@io.vertx.codegen.annotations.GenModule(name = "vertx")
+package io.vertx.core;
