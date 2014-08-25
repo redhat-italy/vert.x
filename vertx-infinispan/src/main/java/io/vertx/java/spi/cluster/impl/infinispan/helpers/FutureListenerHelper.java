@@ -16,21 +16,42 @@
 
 package io.vertx.java.spi.cluster.impl.infinispan.helpers;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 import org.infinispan.commons.util.concurrent.FutureListener;
 
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
-public class FutureListenerHelper<T> implements FutureListener<T> {
+public class FutureListenerHelper<T> implements FutureListener<T>, Handler<AsyncResult<T>> {
 
-    private Optional<Consumer<Exception>> onError;
-    private Optional<Consumer<T>> onSuccess;
+    private Optional<Consumer<Throwable>> onError = Optional.empty();
+    private Optional<Consumer<T>> onSuccess = Optional.empty();
 
-    public FutureListenerHelper(Consumer<T> onSuccess, Consumer<Exception> onError) {
+    public FutureListenerHelper() {
+    }
+
+    public FutureListenerHelper(Consumer<T> onSuccess, Consumer<Throwable> onError) {
         this.onSuccess = Optional.of(onSuccess);
         this.onError = Optional.of(onError);
+    }
+
+    public FutureListenerHelper<T> then(Consumer<T> success) {
+        this.onSuccess = Optional.of(success);
+        return this;
+    }
+
+    public <R> FutureListenerHelper<R> andThen(Function<T, FutureListenerHelper<R>> success) {
+        FutureListenerHelper<R> compose = new FutureListenerHelper<>();
+        this.onSuccess = Optional.of((t) -> {
+            success
+                    .apply(t)
+                    .then((r) -> r.accept());
+        });
+        return compose;
     }
 
     @Override
@@ -48,4 +69,12 @@ public class FutureListenerHelper<T> implements FutureListener<T> {
         }
     }
 
+    @Override
+    public void handle(AsyncResult<T> future) {
+        if (future.succeeded()) {
+            this.onSuccess.ifPresent((consumer) -> consumer.accept(future.result()));
+        } else {
+            this.onError.ifPresent((consumer) -> consumer.accept(future.cause()));
+        }
+    }
 }

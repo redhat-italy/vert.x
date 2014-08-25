@@ -18,14 +18,22 @@ package io.vertx.java.spi.cluster.impl.infinispan.helpers;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.java.spi.cluster.impl.infinispan.support.AsyncResultFailFastException;
 
+import java.lang.invoke.MethodHandle;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-public class AsyncResultFunctional<T> implements Handler<AsyncResult<T>> {
+public class AsyncResultHelper<T> implements Handler<AsyncResult<T>> {
 
     private Optional<Consumer<T>> success = Optional.empty();
     private Optional<Consumer<Throwable>> error = Optional.empty();
+
+    public static <T> Handler<AsyncResult<T>> failFast(Consumer<T> success) {
+        return new AsyncResultHelper<T>().onSuccess(success).onError((e) -> {
+            throw new AsyncResultFailFastException(null, e);
+        });
+    }
 
     @Override
     public void handle(AsyncResult<T> event) {
@@ -36,12 +44,12 @@ public class AsyncResultFunctional<T> implements Handler<AsyncResult<T>> {
         }
     }
 
-    public AsyncResultFunctional<T> onSuccess(Consumer<T> success) {
+    public AsyncResultHelper<T> onSuccess(Consumer<T> success) {
         this.success = Optional.of(success);
         return this;
     }
 
-    public AsyncResultFunctional<T> onError(Consumer<Throwable> error) {
+    public AsyncResultHelper<T> onError(Consumer<Throwable> error) {
         this.error = Optional.of(error);
         return this;
     }

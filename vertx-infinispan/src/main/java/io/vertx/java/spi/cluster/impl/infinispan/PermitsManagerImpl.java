@@ -23,7 +23,7 @@ import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.shareddata.Counter;
 import io.vertx.core.shareddata.Lock;
 import io.vertx.core.spi.cluster.VertxSPI;
-import io.vertx.java.spi.cluster.impl.infinispan.helpers.AsyncResultFailFast;
+import io.vertx.java.spi.cluster.impl.infinispan.helpers.AsyncResultHelper;
 import org.infinispan.Cache;
 
 import java.util.concurrent.CountDownLatch;
@@ -37,31 +37,34 @@ public class PermitsManagerImpl implements PermitsManager {
     private final static Logger log = LoggerFactory.getLogger(PermitsManagerImpl.class);
 
     private VertxSPI vertx;
-    private CounterFactory counterFactory;
+    private CounterFactoryFluent counterFactory;
 
-    private Cache<String, Long> lockCache;
+    private Cache<Long, Long> lockCache;
 
-    public PermitsManagerImpl(VertxSPI vertx, CounterFactory counterFactory, Cache<String, Long> cache) {
+    public PermitsManagerImpl(VertxSPI vertx, CounterFactory counterFactory, Cache<Long, Long> cache) {
         this.vertx = vertx;
-        this.counterFactory = counterFactory;
+        this.counterFactory = new CounterFactoryFluent(counterFactory);
         this.lockCache = cache;
     }
 
     @Override
     public void acquireLock(long timeout, Handler<AsyncResult<Lock>> lock) {
         vertx.<Lock>executeBlocking(() -> {
-                    CountDownLatch latch = new CountDownLatch(1);
+                    counterFactory
+                            .getCounter(LOCK_COUNTER_KEY)
+                            .then((counter) -> counter.incrementAndGet());
+
+
+
+
                     counterFactory.getCounter(LOCK_COUNTER_KEY,
-                            new AsyncResultFailFast<Counter>(
-                                    (counter) -> counter.incrementAndGet(new AsyncResultFailFast<Long>(
-                                            ()
-                                    ))
+                            AsyncResultHelper.<Counter>failFast(
+                                    (counter) -> counter.incrementAndGet(
+                                            AsyncResultHelper.<Long>failFast((v)-> lockCache.put(v, v, timeout, TimeUnit.MILLISECONDS))
+                                    )
                             )
                     );
-                    try {
-                        boolean await = latch.await(timeout, TimeUnit.MILLISECONDS);
-                    } catch (InterruptedException e) {
-                    }
+
                 }
         );
     }
