@@ -20,11 +20,11 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import org.infinispan.commons.util.concurrent.FutureListener;
 
+import javax.swing.text.html.Option;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 public class FutureListenerHelper<T> implements FutureListener<T>, Handler<AsyncResult<T>> {
 
@@ -44,14 +44,13 @@ public class FutureListenerHelper<T> implements FutureListener<T>, Handler<Async
         return this;
     }
 
-    public <R> FutureListenerHelper<R> andThen(Function<T, FutureListenerHelper<R>> success) {
-        FutureListenerHelper<R> compose = new FutureListenerHelper<>();
-        this.onSuccess = Optional.of((t) -> {
-            success
-                    .apply(t)
-                    .then((r) -> r.accept());
+    public <R> FutureListenerHelper<R> andThen(Consumer<R> success) {
+        FutureListenerHelper<T> self = this;
+        FutureListenerHelper<R> composer = new FutureListenerHelper<>();
+        composer.onSuccess = Optional.of((t) -> {
+            self.onSuccess.ifPresent((c) -> c.accept(t));
         });
-        return compose;
+        return composer;
     }
 
     @Override
