@@ -40,6 +40,8 @@ import org.infinispan.configuration.global.GlobalConfigurationBuilder;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.manager.EmbeddedCacheManager;
 import org.infinispan.remoting.transport.Address;
+import org.infinispan.remoting.transport.Transport;
+import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
 import org.infinispan.transaction.LockingMode;
 import org.infinispan.transaction.TransactionMode;
 import org.infinispan.transaction.TransactionProtocol;
@@ -179,6 +181,9 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager, Co
             cacheManager = new DefaultCacheManager(globalConfiguration, asyncConfiguration);
 
             cacheManager.start();
+
+            JGroupsTransport transport = (JGroupsTransport) cacheManager.getTransport();
+            transport.getChannel();
 
             Configuration lockConfiguration = new ConfigurationBuilder()
                     .versioning().scheme(VersioningScheme.SIMPLE).enable()

@@ -31,6 +31,10 @@ import java.util.concurrent.TimeUnit;
 
 public class PermitsManagerImpl implements PermitsManager {
 
+    //Vedere LOCK e COUNTER su jgroups
+    //ForkChannel !!
+    //JGroupsTransport
+
     private final static String LOCK_COUNTER_KEY = "__vertx_lock_counter_key";
     private final static String LOCK_KEY_PREFIX = "__vertx_lock_key_prefix";
 

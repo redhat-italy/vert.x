@@ -38,6 +38,7 @@
       <artifactId>vertx-core</artifactId>
       <type>test-jar</type>
     </dependency>
+
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
@@ -46,11 +47,11 @@
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-core</artifactId>
     </dependency>
+
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
-
   </dependencies>
 </project>

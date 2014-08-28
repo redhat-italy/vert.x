@@ -20,60 +20,74 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import org.infinispan.commons.util.concurrent.FutureListener;
 
-import javax.swing.text.html.Option;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 public class FutureListenerHelper<T> implements FutureListener<T>, Handler<AsyncResult<T>> {
 
-    private Optional<Consumer<Throwable>> onError = Optional.empty();
-    private Optional<Consumer<T>> onSuccess = Optional.empty();
+    private Consumer<Throwable> onError;
+    private Stream<Consumer<T>> onSuccess;
 
-    public FutureListenerHelper() {
+    public FutureListenerHelper(Stream<Consumer<T>> onSuccess, Consumer<Throwable> onError) {
+        this.onSuccess = onSuccess;
+        this.onError = onError;
     }
 
     public FutureListenerHelper(Consumer<T> onSuccess, Consumer<Throwable> onError) {
-        this.onSuccess = Optional.of(onSuccess);
-        this.onError = Optional.of(onError);
+        this.onSuccess = Stream.of(onSuccess);
+        this.onError = onError;
     }
 
-    public FutureListenerHelper<T> then(Consumer<T> success) {
-        this.onSuccess = Optional.of(success);
-        return this;
+    private void done(T value) {
+        this.onSuccess.forEachOrdered((c) -> c.accept(value));
     }
 
-    public <R> FutureListenerHelper<R> andThen(Consumer<R> success) {
-        FutureListenerHelper<T> self = this;
-        FutureListenerHelper<R> composer = new FutureListenerHelper<>();
-        composer.onSuccess = Optional.of((t) -> {
-            self.onSuccess.ifPresent((c) -> c.accept(t));
-        });
-        return composer;
+    private void error(Throwable value) {
+        this.onError.accept(value);
     }
 
     @Override
     public void futureDone(Future<T> future) {
         if (future.isDone()) {
-            this.onSuccess.ifPresent((consumer) -> {
-                try {
-                    consumer.accept(future.get());
-                } catch (InterruptedException | ExecutionException cause) {
-                    this.onError.ifPresent((error) -> error.accept(cause));
-                }
-            });
+            try {
+                done(future.get());
+            } catch (InterruptedException | ExecutionException e) {
+                error(e);
+            }
         } else {
-            this.onError.ifPresent((consumer) -> consumer.accept(null));
+            error(null);
         }
     }
 
     @Override
     public void handle(AsyncResult<T> future) {
         if (future.succeeded()) {
-            this.onSuccess.ifPresent((consumer) -> consumer.accept(future.result()));
+            done(future.result());
         } else {
-            this.onError.ifPresent((consumer) -> consumer.accept(future.cause()));
+            error(future.cause());
+        }
+    }
+
+    public class Builder<T> {
+
+        private Optional<Consumer<Throwable>> onError = Optional.empty();
+        private Stream.Builder<Optional<Consumer<T>>> onSuccess = Stream.builder();
+
+        public FutureListenerHelper<T> build() {
+            return new FutureListenerHelper<T>(this.onSuccess.build().filter(Optional::isPresent).map(Optional::get), this.onError.get());
+        }
+
+        public Builder<T> then(Consumer<T> onSuccess) {
+            this.onSuccess.add(Optional.of(onSuccess));
+            return this;
+        }
+
+        public Builder<T> error(Consumer<Throwable> onError) {
+            this.onError = Optional.of(onError);
+            return this;
         }
     }
 }
