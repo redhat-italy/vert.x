@@ -14,28 +14,24 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.core.impl;
+package io.vertx.core.streams;
 
-import io.vertx.core.json.JsonObject;
-
-import java.util.concurrent.Executor;
+import io.vertx.codegen.annotations.Fluent;
+import io.vertx.codegen.annotations.VertxGen;
+import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
 
 /**
+ * Represents a stream of data.<p>
+ *
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
-public class MultiThreadedWorkerContext extends WorkerContext {
+@VertxGen(concrete = false)
+public interface StreamBase<T> {
 
-  public MultiThreadedWorkerContext(VertxInternal vertx, Executor orderedInternalExec, Executor workerExec, String deploymentID, JsonObject config) {
-    super(vertx, orderedInternalExec, workerExec, deploymentID, config);
-  }
-
-  @Override
-  public void doExecute(ContextTask task) {
-    workerExec.execute(wrapTask(task, false));
-  }
-
-  @Override
-  public boolean isMultithreaded() {
-    return true;
-  }
+  /**
+   * Set an exception handler.
+   */
+  @Fluent
+  T exceptionHandler(Handler<Throwable> handler);
 }

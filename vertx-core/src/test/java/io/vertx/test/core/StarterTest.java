@@ -19,6 +19,9 @@ package io.vertx.test.core;
 import io.vertx.core.Starter;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
@@ -27,11 +30,12 @@ public class StarterTest extends VertxTestBase {
   public void setUp() throws Exception {
     super.setUp();
     TestVerticle.instanceCount.set(0);
+    TestVerticle.processArgs = null;
   }
 
   @Test
   public void testVersion() throws Exception {
-    String[] args = new String[] {"version"};
+    String[] args = new String[] {"-version"};
     Starter starter = new Starter();
     starter.run(args);
     // TODO some way of getting this from the version in pom.xml
@@ -41,13 +45,15 @@ public class StarterTest extends VertxTestBase {
   @Test
   public void testRunVerticle() throws Exception {
     Starter starter = new Starter();
+    String[] args = new String[] {"run", "java:" + TestVerticle.class.getCanonicalName()};
     Thread t = new Thread(() -> {
-      String[] args = new String[] {"run", "java:" + TestVerticle.class.getCanonicalName()};
       starter.run(args);
     });
     t.start();
     waitUntil(() -> TestVerticle.instanceCount.get() == 1);
     assertTrue(t.isAlive()); // It's blocked
+    List<String> processArgs = TestVerticle.processArgs;
+    assertEquals(Arrays.asList(args), TestVerticle.processArgs);
     // Now unblock it
     starter.unblock();
     waitUntil(() -> !t.isAlive());
@@ -56,13 +62,46 @@ public class StarterTest extends VertxTestBase {
   @Test
   public void testRunVerticleClustered() throws Exception {
     Starter starter = new Starter();
+    String[] args = new String[] {"run", "java:" + TestVerticle.class.getCanonicalName(), "-cluster"};
     Thread t = new Thread(() -> {
-      String[] args = new String[] {"run", "java:" + TestVerticle.class.getCanonicalName(), "-cluster"};
       starter.run(args);
     });
     t.start();
     waitUntil(() -> TestVerticle.instanceCount.get() == 1);
     assertTrue(t.isAlive()); // It's blocked
+    assertEquals(Arrays.asList(args), TestVerticle.processArgs);
+    // Now unblock it
+    starter.unblock();
+    waitUntil(() -> !t.isAlive());
+  }
+
+  @Test
+  public void testRunVerticleWithMainVerticleInManifestNoArgs() throws Exception {
+    Starter starter = new Starter();
+    String[] args = new String[0];
+    Thread t = new Thread(() -> {
+      starter.run(args);
+    });
+    t.start();
+    waitUntil(() -> TestVerticle.instanceCount.get() == 1);
+    assertTrue(t.isAlive()); // It's blocked
+    assertEquals(Arrays.asList(args), TestVerticle.processArgs);
+    // Now unblock it
+    starter.unblock();
+    waitUntil(() -> !t.isAlive());
+  }
+
+  @Test
+  public void testRunVerticleWithMainVerticleInManifestWithArgs() throws Exception {
+    Starter starter = new Starter();
+    String[] args = new String[] {"-cluster", "-worker"};
+    Thread t = new Thread(() -> {
+      starter.run(args);
+    });
+    t.start();
+    waitUntil(() -> TestVerticle.instanceCount.get() == 1);
+    assertTrue(t.isAlive()); // It's blocked
+    assertEquals(Arrays.asList(args), TestVerticle.processArgs);
     // Now unblock it
     starter.unblock();
     waitUntil(() -> !t.isAlive());

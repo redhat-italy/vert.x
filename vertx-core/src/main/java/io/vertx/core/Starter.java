@@ -30,13 +30,18 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.jar.Attributes;
+import java.util.jar.Manifest;
 
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
@@ -45,35 +50,40 @@ public class Starter {
 
   private static final Logger log = LoggerFactory.getLogger(Starter.class);
 
+  public static List<String> PROCESS_ARGS;
+
   public static void main(String[] args) {
     new Starter().run(args);
   }
 
   public void run(String[] sargs) {
 
-    Args args = new Args(sargs);
-    sargs = removeOptions(sargs);
+    PROCESS_ARGS = Collections.unmodifiableList(Arrays.asList(sargs));
 
-    if (sargs.length == 0) {
-      displaySyntax();
-    } else {
-      String command = sargs[0].toLowerCase();
-      if ("version".equals(command)) {
+    Args args = new Args(sargs);
+
+    if (sargs.length > 0) {
+      String first = sargs[0];
+      if (first.equals("-version")) {
         log.info(getVersion());
-      } else {
+        return;
+      } else if (first.equals("run")) {
         if (sargs.length < 2) {
           displaySyntax();
+          return;
         } else {
           String main = sargs[1];
-          switch (command) {
-            case "run":
-              runVerticle(main, args);
-              break;
-            default:
-              displaySyntax();
-          }
+          runVerticle(main, args);
+          return;
         }
       }
+    }
+
+    String main = readMainVerticleFromManifest();
+    if (main != null) {
+      runVerticle(main, args);
+    } else {
+      displaySyntax();
     }
   }
 
@@ -132,7 +142,7 @@ public class Starter {
       }
       CountDownLatch latch = new CountDownLatch(1);
       AtomicReference<AsyncResult<Vertx>> result = new AtomicReference<>();
-      Vertx.vertx(VertxOptions.options().setClusterHost(clusterHost).setClusterPort(clusterPort).setClustered(true), ar -> {
+      Vertx.vertxAsync(VertxOptions.options().setClusterHost(clusterHost).setClusterPort(clusterPort).setClustered(true), ar -> {
         result.set(ar);
         latch.countDown();
       });
@@ -286,6 +296,25 @@ public class Starter {
     } catch (IOException e) {
       throw new IllegalStateException(e.getMessage());
     }
+  }
+
+  private String readMainVerticleFromManifest() {
+    try {
+      Enumeration<URL> resources = getClass().getClassLoader().getResources("META-INF/MANIFEST.MF");
+      while (resources.hasMoreElements()) {
+        Manifest manifest = new Manifest(resources.nextElement().openStream());
+        Attributes attributes = manifest.getMainAttributes();
+        if (Starter.class.getName().equals(attributes.getValue("Main-Class"))) {
+          String theMainVerticle = attributes.getValue("Main-Verticle");
+          if (theMainVerticle != null) {
+            return theMainVerticle;
+          }
+        }
+      }
+    } catch (IOException e) {
+      throw new IllegalStateException(e.getMessage());
+    }
+    return null;
   }
 
   private void displaySyntax() {
