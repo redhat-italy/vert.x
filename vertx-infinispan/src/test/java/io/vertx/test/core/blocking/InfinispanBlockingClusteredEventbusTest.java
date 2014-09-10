@@ -28,7 +28,4 @@ public class InfinispanBlockingClusteredEventbusTest extends ClusteredEventBusTe
         return new InfinispanBlockingClusterManager();
     }
 
-    @Test
-    public void testFoo() {
-    }
 }

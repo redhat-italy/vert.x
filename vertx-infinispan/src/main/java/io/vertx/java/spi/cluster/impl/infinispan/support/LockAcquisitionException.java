@@ -16,10 +16,8 @@
 
 package io.vertx.java.spi.cluster.impl.infinispan.support;
 
-public class LockAcquisitionException extends Throwable {
+public class LockAcquisitionException extends RuntimeException {
 
-    public final static LockAcquisitionException INSTANCE = new LockAcquisitionException();
-
-    private LockAcquisitionException() {
+    public LockAcquisitionException() {
     }
 }

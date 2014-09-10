@@ -32,7 +32,4 @@ public class InfinispanAsyncClusteredAsynchronousLockTest extends ClusteredAsync
         return new InfinispanAsyncClusterManager();
     }
 
-    @Test
-    public void testFoo() {
-    }
 }

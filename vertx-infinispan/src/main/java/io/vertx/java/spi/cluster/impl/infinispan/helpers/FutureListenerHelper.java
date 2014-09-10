@@ -31,11 +31,6 @@ public class FutureListenerHelper<T> implements FutureListener<T>, Handler<Async
     private Consumer<Throwable> onError;
     private Stream<Consumer<T>> onSuccess;
 
-    public FutureListenerHelper(Stream<Consumer<T>> onSuccess, Consumer<Throwable> onError) {
-        this.onSuccess = onSuccess;
-        this.onError = onError;
-    }
-
     public FutureListenerHelper(Consumer<T> onSuccess, Consumer<Throwable> onError) {
         this.onSuccess = Stream.of(onSuccess);
         this.onError = onError;
@@ -71,23 +66,4 @@ public class FutureListenerHelper<T> implements FutureListener<T>, Handler<Async
         }
     }
 
-    public class Builder<T> {
-
-        private Optional<Consumer<Throwable>> onError = Optional.empty();
-        private Stream.Builder<Optional<Consumer<T>>> onSuccess = Stream.builder();
-
-        public FutureListenerHelper<T> build() {
-            return new FutureListenerHelper<T>(this.onSuccess.build().filter(Optional::isPresent).map(Optional::get), this.onError.get());
-        }
-
-        public Builder<T> then(Consumer<T> onSuccess) {
-            this.onSuccess.add(Optional.of(onSuccess));
-            return this;
-        }
-
-        public Builder<T> error(Consumer<Throwable> onError) {
-            this.onError = Optional.of(onError);
-            return this;
-        }
-    }
 }

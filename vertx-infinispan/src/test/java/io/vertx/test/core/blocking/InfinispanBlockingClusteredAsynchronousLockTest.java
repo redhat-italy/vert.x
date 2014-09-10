@@ -28,7 +28,4 @@ public class InfinispanBlockingClusteredAsynchronousLockTest extends ClusteredAs
         return new InfinispanBlockingClusterManager();
     }
 
-    @Test
-    public void testFoo() {
-    }
 }
