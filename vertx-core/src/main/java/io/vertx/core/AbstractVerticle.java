@@ -36,13 +36,13 @@ public abstract class AbstractVerticle implements Verticle {
   @Override
   public void start(Future<Void> startFuture) throws Exception {
     start();
-    startFuture.setResult(null);
+    startFuture.complete();
   }
 
   @Override
   public void stop(Future<Void> stopFuture) throws Exception {
     stop();
-    stopFuture.setResult(null);
+    stopFuture.complete();
   }
 
   public void start() throws Exception {

@@ -133,7 +133,11 @@ public abstract class ContextImpl implements Context {
 
   public abstract boolean isEventLoopContext();
 
-  public abstract boolean isMultithreaded();
+  public abstract boolean isMultiThreaded();
+
+  public boolean isWorker() {
+    return !isEventLoopContext();
+  }
 
   public void execute(ContextTask task, boolean expectRightThread) {
     if (isOnCorrectContextThread(expectRightThread)) {
@@ -179,9 +183,9 @@ public abstract class ContextImpl implements Context {
         Future<T> res = Future.future();
         try {
           T result = action.perform();
-          res.setResult(result);
+          res.complete(result);
         } catch (Throwable e) {
-          res.setFailure(e);
+          res.fail(e);
         }
         if (resultHandler != null) {
           execute(() -> res.setHandler(resultHandler), false);
