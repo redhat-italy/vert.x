@@ -122,19 +122,12 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
         () -> {
           try {
             Lock lock = lockService.getLock(name);
-//            System.out.println("Lock [" + lockService + "] -> [" + lock + "@" + lock.hashCode() + "] started [" + System.currentTimeMillis() + "] timeout [" + timeout + "]");
+            System.out.println(String.format("TRY LOCK on [%s] Thread [%s]", name, Thread.currentThread()));
             if (lock.tryLock(timeout, TimeUnit.MILLISECONDS)) {
+              System.out.println(String.format("LOCKED on [%s] Thread [%s]", name, Thread.currentThread()));
               return (io.vertx.core.shareddata.Lock) lock::unlock;
-//              System.out.println("Locked [" + lockService + "] -> [" + lock + "@" + lock.hashCode() + "]");
-//              return (io.vertx.core.shareddata.Lock) () -> {
-//                System.out.println("UnLock[" + lock + "@" + lock.hashCode() + "]");
-//                lock.unlock();
-//                System.out.println("UnLocked[" + lock + "@" + lock.hashCode() + "]");
-//              };
             }
-//            System.out.println("NOT Locked[" + lock + "@" + lock.hashCode() + "]");
           } catch (InterruptedException e) {
-            e.printStackTrace();
           }
           throw new VertxException("Timed out waiting to get lock " + name);
         },
@@ -186,7 +179,7 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
       JChannel counterChannel = forkChannel(transport.getChannel(), VERTX_COUNTER_CHANNEL, cacheManager.getAddress().toString(), new COUNTER());
       counterService = new CounterService(counterChannel);
 
-      JChannel lockChannel = forkChannel(transport.getChannel(), VERTX_LOCK_CHANNEL, cacheManager.getAddress().toString(), new PEER_LOCK());
+      JChannel lockChannel = forkChannel(transport.getChannel(), VERTX_LOCK_CHANNEL, cacheManager.getAddress().toString(), new SEQUENCER(), new PEER_LOCK());
       lockService = new LockService(lockChannel);
 
       active = true;
