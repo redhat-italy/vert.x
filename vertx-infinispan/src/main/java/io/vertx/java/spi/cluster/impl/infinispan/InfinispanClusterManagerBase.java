@@ -122,17 +122,19 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
         () -> {
           try {
             Lock lock = lockService.getLock(name);
-            System.out.println("Lock [" + lockService + "] -> [" + lock + "@" + lock.hashCode() + "]");
+//            System.out.println("Lock [" + lockService + "] -> [" + lock + "@" + lock.hashCode() + "] started [" + System.currentTimeMillis() + "] timeout [" + timeout + "]");
             if (lock.tryLock(timeout, TimeUnit.MILLISECONDS)) {
-              System.out.println("Locked [" + lockService + "] -> [" + lock + "@" + lock.hashCode() + "]");
-              return (io.vertx.core.shareddata.Lock) () -> {
-                System.out.println("UnLock[" + lock + "@" + lock.hashCode() + "]");
-                lock.unlock();
-                System.out.println("UnLocked[" + lock + "@" + lock.hashCode() + "]");
-              };
+              return (io.vertx.core.shareddata.Lock) lock::unlock;
+//              System.out.println("Locked [" + lockService + "] -> [" + lock + "@" + lock.hashCode() + "]");
+//              return (io.vertx.core.shareddata.Lock) () -> {
+//                System.out.println("UnLock[" + lock + "@" + lock.hashCode() + "]");
+//                lock.unlock();
+//                System.out.println("UnLocked[" + lock + "@" + lock.hashCode() + "]");
+//              };
             }
-            System.out.println("NOT Locked[" + lock + "@" + lock.hashCode() + "]");
+//            System.out.println("NOT Locked[" + lock + "@" + lock.hashCode() + "]");
           } catch (InterruptedException e) {
+            e.printStackTrace();
           }
           throw new VertxException("Timed out waiting to get lock " + name);
         },
@@ -181,22 +183,20 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
 
       JGroupsTransport transport = (JGroupsTransport) cacheManager.getCache().getAdvancedCache().getRpcManager().getTransport();
 
-      JChannel counterChannel = forkChannel(transport.getChannel(), VERTX_COUNTER_CHANNEL, new COUNTER());
+      JChannel counterChannel = forkChannel(transport.getChannel(), VERTX_COUNTER_CHANNEL, cacheManager.getAddress().toString(), new COUNTER());
       counterService = new CounterService(counterChannel);
 
-      JChannel lockChannel = forkChannel(transport.getChannel(), VERTX_LOCK_CHANNEL, new PEER_LOCK());
+      JChannel lockChannel = forkChannel(transport.getChannel(), VERTX_LOCK_CHANNEL, cacheManager.getAddress().toString(), new PEER_LOCK());
       lockService = new LockService(lockChannel);
-      System.out.println("Build lockservice[" + lockService + "]");
 
       active = true;
       return null;
     }, handler);
   }
 
-  private ForkChannel forkChannel(Channel mainChannel, String forkStackId, Protocol... protocols) {
+  private ForkChannel forkChannel(Channel mainChannel, String forkStackId, String channelId, Protocol... protocols) {
     try {
-      String forkChannelId = cacheManager.getAddress().toString();
-      ForkChannel forkChannel = new ForkChannel(mainChannel, forkStackId, forkChannelId, true, ProtocolStack.ABOVE, FRAG2.class, protocols);
+      ForkChannel forkChannel = new ForkChannel(mainChannel, forkStackId, channelId, true, ProtocolStack.ABOVE, FRAG2.class, protocols);
       forkChannel.connect("ignored");
       return forkChannel;
     } catch (Exception e) {
