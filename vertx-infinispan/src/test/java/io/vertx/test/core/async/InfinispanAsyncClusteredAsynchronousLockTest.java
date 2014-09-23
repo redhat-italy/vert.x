@@ -17,6 +17,7 @@
 package io.vertx.test.core.async;
 
 import io.vertx.core.shareddata.Lock;
+import io.vertx.core.shareddata.SharedData;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.java.spi.cluster.impl.infinispan.async.InfinispanAsyncClusterManager;
 import io.vertx.test.core.ClusteredAsynchronousLockTest;
@@ -45,7 +46,7 @@ public class InfinispanAsyncClusteredAsynchronousLockTest extends ClusteredAsync
       vertx.setTimer(1000, tid -> {
         lock.release();
       });
-      vertx.setTimer(3000, tid -> {
+      vertx.setTimer(1000, tid -> {
         getVertx().sharedData().getLockWithTimeout("foo", 1000, ar2 -> {
           assertTrue(ar2.succeeded());
           // Should be delayed

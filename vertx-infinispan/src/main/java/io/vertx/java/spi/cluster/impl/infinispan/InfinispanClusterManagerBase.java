@@ -122,10 +122,14 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
         () -> {
           try {
             Lock lock = lockService.getLock(name);
-            System.out.println(String.format("TRY LOCK on [%s] Thread [%s]", name, Thread.currentThread()));
+            System.out.println(String.format("TRY LOCK on [%s] Thread [%d - %s]", lock, Thread.currentThread().getId(), Thread.currentThread().getName()));
             if (lock.tryLock(timeout, TimeUnit.MILLISECONDS)) {
-              System.out.println(String.format("LOCKED on [%s] Thread [%s]", name, Thread.currentThread()));
-              return (io.vertx.core.shareddata.Lock) lock::unlock;
+              System.out.println(String.format("LOCKED on [%s] Thread [%d - %s]", lock, Thread.currentThread().getId(), Thread.currentThread().getName()));
+              return (io.vertx.core.shareddata.Lock) ()-> {
+                System.out.println(String.format("TO BE UNLOCKED on [%s] Thread [%d - %s]", lock, Thread.currentThread().getId(), Thread.currentThread().getName()));
+                lock.unlock();
+                System.out.println(String.format("UNLOCKED on [%s] Thread [%d - %s]", lock, Thread.currentThread().getId(), Thread.currentThread().getName()));
+              };
             }
           } catch (InterruptedException e) {
           }
