@@ -17,7 +17,7 @@
 package io.vertx.core.http;
 
 import io.vertx.core.Handler;
-import io.vertx.core.Headers;
+import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.codegen.annotations.CacheReturn;
 import io.vertx.codegen.annotations.Fluent;
@@ -34,7 +34,7 @@ import javax.security.cert.X509Certificate;
  * Represents a server-side HTTP request.<p>
  * Instances are created for each request that is handled by the server
  * and is passed to the user via the {@link io.vertx.core.Handler} instance
- * registered with the {@link HttpServer} using the method {@link HttpServer#requestHandler(io.vertx.core.Handler)}.<p>
+ * registered with the {@link HttpServer} using the request stream {@link io.vertx.core.http.HttpServer#requestStream()}.<p>
  * Each instance of this class is associated with a corresponding {@link HttpServerResponse} instance via
  * the {@code response} field.<p>
  * It implements {@link io.vertx.core.streams.ReadStream} so it can be used with
@@ -86,13 +86,13 @@ public interface HttpServerRequest extends ReadStream<HttpServerRequest, Buffer>
    * The headers will be automatically lower-cased when they reach the server
    */
   @CacheReturn
-  Headers headers();
+  MultiMap headers();
 
   /**
    * Returns a map of all the parameters in the request
    */
   @CacheReturn
-  Headers params();
+  MultiMap params();
 
   /**
    * Return the remote (client side) address of the request
@@ -161,6 +161,6 @@ public interface HttpServerRequest extends ReadStream<HttpServerRequest, Buffer>
    * {@link #setExpectMultipart(boolean)} must be called first before trying to get the formAttributes
    */
   @CacheReturn
-  Headers formAttributes();
+  MultiMap formAttributes();
 
 }

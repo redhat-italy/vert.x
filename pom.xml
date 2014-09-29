@@ -55,10 +55,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <netty.version>4.0.21.Final</netty.version>
-    <jackson.version>2.2.2</jackson.version>
     <infinispan.version>6.0.2.Final</infinispan.version>
-    <hazelcast.version>3.2.1</hazelcast.version>
     <netty.version>4.0.23.Final</netty.version>
     <jackson.version>2.4.0</jackson.version>
     <hazelcast.version>3.2.5</hazelcast.version>
@@ -72,7 +69,6 @@
   <modules>
     <module>vertx-core</module>
     <module>vertx-hazelcast</module>
-    <module>vertx-dist</module>
     <module>vertx-infinispan</module>
   </modules>
 
@@ -189,15 +185,13 @@
           <version>2.14</version>
           <configuration>
             <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
-            <excludes>
-              <exclude>**/Hazelcast*.java</exclude>
-            </excludes>
+              <excludes>
+                <exclude>**/Hazelcast*.java</exclude>
+              </excludes>
             <systemPropertyVariables>
               <io.netty.leakDetectionLevel>PARANOID</io.netty.leakDetectionLevel>
-              <java.util.logging.SimpleFormatter.format>%4$s: %3$s - %5$s %6$s%n
-              </java.util.logging.SimpleFormatter.format>
-              <java.util.logging.config.file>${project.basedir}../vertx-dist/src/conf/logging.properties
-              </java.util.logging.config.file>
+              <java.util.logging.SimpleFormatter.format>%4$s: %3$s - %5$s %6$s%n</java.util.logging.SimpleFormatter.format>
+              <java.util.logging.config.file>${project.basedir}/src/test/conf/logging.properties</java.util.logging.config.file>
             </systemPropertyVariables>
             <!-- Needs to be small enough to run in a EC2 1.7GB small instance -->
             <argLine>-Xmx1200M</argLine>
@@ -205,11 +199,11 @@
             <reuseForks>true</reuseForks>
           </configuration>
         </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-surefire-report-plugin</artifactId>
-          <version>2.17</version>
-        </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-report-plugin</artifactId>
+            <version>2.17</version>
+          </plugin>
       </plugins>
     </pluginManagement>
 

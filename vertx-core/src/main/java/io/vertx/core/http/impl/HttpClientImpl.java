@@ -35,7 +35,7 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Headers;
+import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
@@ -82,7 +82,7 @@ public class HttpClientImpl implements HttpClient {
 
   public HttpClientImpl(VertxInternal vertx, HttpClientOptions options) {
     this.vertx = vertx;
-    this.options = HttpClientOptions.copiedOptions(options);
+    this.options = new HttpClientOptions(options);
     this.sslHelper = new SSLHelper(options, KeyStoreHelper.create(vertx, options.getKeyStoreOptions()), KeyStoreHelper.create(vertx, options.getTrustStoreOptions()));
     this.creatingContext = vertx.getContext();
     closeHook = completionHandler -> {
@@ -392,12 +392,12 @@ public class HttpClientImpl implements HttpClient {
           }
 
           @Override
-          public Headers headers() {
+          public MultiMap headers() {
             return resp.headers();
           }
 
           @Override
-          public Headers trailers() {
+          public MultiMap trailers() {
             return resp.trailers();
           }
 

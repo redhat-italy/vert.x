@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2014 The original author or authors
+ * Copyright (c) 2011-2013 The original author or authors
  * ------------------------------------------------------
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -13,13 +13,17 @@
  *
  * You may elect to redistribute this code under either of these licenses.
  */
+package io.vertx.core.http;
 
-package io.vertx.test.core.sourceverticle.somepackage;
-
-import io.vertx.core.AbstractVerticle;
+import io.vertx.codegen.annotations.VertxGen;
+import io.vertx.core.streams.ReadStream;
 
 /**
- * @author <a href="http://tfox.org">Tim Fox</a>
+ * Represents a stream of connections to the {@link HttpServer} that can be read from.
+ *
+ * @author <a href="mailto:julien@julienviet.com">Julien Viet</a>
+ * @param <C> the http connection
  */
-public class OtherSourceVerticle extends AbstractVerticle {
+@VertxGen
+public interface HttpStream<C> extends ReadStream<HttpStream<C>, C> {
 }
