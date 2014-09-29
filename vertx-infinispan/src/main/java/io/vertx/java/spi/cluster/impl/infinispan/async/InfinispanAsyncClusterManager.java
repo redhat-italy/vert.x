@@ -30,15 +30,15 @@ public class InfinispanAsyncClusterManager extends InfinispanClusterManagerBase 
 
     @Override
     public <K, V> void getAsyncMultiMap(String name, MapOptions options, Handler<AsyncResult<AsyncMultiMap<K, V>>> handler) {
-        execute(() -> {
-            Cache<K, ImmutableChoosableSet<V>> cache = getCacheManager().<K, ImmutableChoosableSet<V>>getCache(name, true);
-            return new InfinispanAsyncMultiMap<>(cache);
-        }, handler);
+      getVertx().executeBlocking(() -> {
+        Cache<K, ImmutableChoosableSet<V>> cache = getCacheManager().<K, ImmutableChoosableSet<V>>getCache(name, true);
+        return new InfinispanAsyncMultiMap<>(cache);
+      }, handler);
     }
 
     @Override
     public <K, V> void getAsyncMap(String name, MapOptions options, Handler<AsyncResult<AsyncMap<K, V>>> handler) {
-        execute(()->{
+      getVertx().executeBlocking(()->{
             Cache<K, V> cache = getCacheManager().<K, V>getCache(name, true);
             return new InfinispanAsyncMap<>(cache);
         }, handler);
