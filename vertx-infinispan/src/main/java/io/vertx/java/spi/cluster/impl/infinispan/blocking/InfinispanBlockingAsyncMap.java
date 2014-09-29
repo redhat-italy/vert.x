@@ -22,12 +22,12 @@ import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.spi.cluster.VertxSPI;
 import org.infinispan.Cache;
 
-public class InfinispanAsyncMapBlocking<K, V> implements AsyncMap<K, V> {
+public class InfinispanBlockingAsyncMap<K, V> implements AsyncMap<K, V> {
 
     private VertxSPI vertx;
     private Cache<K, V> map;
 
-    public InfinispanAsyncMapBlocking(VertxSPI vertx, Cache<K, V> map) {
+    public InfinispanBlockingAsyncMap(VertxSPI vertx, Cache<K, V> map) {
         this.vertx = vertx;
         this.map = map;
     }

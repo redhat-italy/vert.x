@@ -23,12 +23,13 @@ import org.junit.Test;
 
 public class InfinispanAsyncHATest extends HATest {
 
-    @Override
-    protected ClusterManager getClusterManager() {
-        return new InfinispanAsyncClusterManager();
-    }
+  public InfinispanAsyncHATest() {
+    disableThreadChecks();
+  }
 
-    @Test
-    public void testFoo() {
-    }
+  @Override
+  protected ClusterManager getClusterManager() {
+    return new InfinispanAsyncClusterManager();
+  }
+
 }

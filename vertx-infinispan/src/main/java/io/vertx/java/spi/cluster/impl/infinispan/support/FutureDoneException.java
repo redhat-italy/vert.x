@@ -14,22 +14,11 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.test.core.async;
+package io.vertx.java.spi.cluster.impl.infinispan.support;
 
-import io.vertx.core.spi.cluster.ClusterManager;
-import io.vertx.java.spi.cluster.impl.infinispan.async.InfinispanAsyncClusterManager;
-import io.vertx.test.core.ClusteredEventBusTest;
-import org.junit.Test;
+public class FutureDoneException extends Exception {
 
-public class InfinispanAsyncClusteredEventbusTest extends ClusteredEventBusTest {
-
-    public InfinispanAsyncClusteredEventbusTest() {
-        disableThreadChecks();
-    }
-
-    @Override
-    protected ClusterManager getClusterManager() {
-        return new InfinispanAsyncClusterManager();
-    }
-
+  public FutureDoneException(Throwable cause) {
+    super(cause);
+  }
 }

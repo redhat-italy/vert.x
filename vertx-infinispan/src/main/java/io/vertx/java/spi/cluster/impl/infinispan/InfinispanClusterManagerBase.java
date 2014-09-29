@@ -68,6 +68,13 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
 
   private boolean active = false;
 
+  private JChannel lockChannel;
+  private JChannel counterChannel;
+
+  private final String _id = org.jgroups.util.UUID.randomUUID().toString();
+  private final String clusterName = "ISPN-" + _id;
+  private final String cacheManagerName = "CacheManager-" + _id;
+
   public InfinispanClusterManagerBase() {
     this.syncConfiguration = new ConfigurationBuilder()
         .clustering().cacheMode(CacheMode.DIST_SYNC)
@@ -98,7 +105,8 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
 
   @Override
   public final String getNodeID() {
-    return cacheManager.getAddress().toString();
+    return _id;
+//    return cacheManager.getAddress().toString();
   }
 
   @Override
@@ -121,17 +129,19 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
     vertxSPI.executeBlocking(
         () -> {
           try {
+            System.out.println(String.format("Lock Service"));
             Lock lock = lockService.getLock(name);
             System.out.println(String.format("TRY LOCK on [%s] Thread [%d - %s]", lock, Thread.currentThread().getId(), Thread.currentThread().getName()));
             if (lock.tryLock(timeout, TimeUnit.MILLISECONDS)) {
               System.out.println(String.format("LOCKED on [%s] Thread [%d - %s]", lock, Thread.currentThread().getId(), Thread.currentThread().getName()));
-              return (io.vertx.core.shareddata.Lock) ()-> {
+              return (io.vertx.core.shareddata.Lock) () -> {
                 System.out.println(String.format("TO BE UNLOCKED on [%s] Thread [%d - %s]", lock, Thread.currentThread().getId(), Thread.currentThread().getName()));
                 lock.unlock();
                 System.out.println(String.format("UNLOCKED on [%s] Thread [%d - %s]", lock, Thread.currentThread().getId(), Thread.currentThread().getName()));
               };
             }
           } catch (InterruptedException e) {
+            e.printStackTrace();
           }
           throw new VertxException("Timed out waiting to get lock " + name);
         },
@@ -170,20 +180,24 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
 
       GlobalConfiguration globalConfiguration = new GlobalConfigurationBuilder()
           .clusteredDefault()
-          .classLoader(GlobalConfiguration.class.getClassLoader())
-          .transport().addProperty("configurationFile", "jgroups-udp.xml")
-          .globalJmxStatistics().allowDuplicateDomains(true).enable()
-          .serialization().addAdvancedExternalizer(new ImmutableChoosableSetSerializer())
+          .transport()
+            .addProperty("configurationFile", "jgroups-udp.xml")
+            .clusterName(clusterName)
+          .globalJmxStatistics()
+            .allowDuplicateDomains(true)
+            .cacheManagerName(cacheManagerName).enable()
+          .serialization()
+            .addAdvancedExternalizer(new ImmutableChoosableSetSerializer())
           .build();
       cacheManager = new DefaultCacheManager(globalConfiguration, asyncConfiguration);
       cacheManager.start();
 
       JGroupsTransport transport = (JGroupsTransport) cacheManager.getCache().getAdvancedCache().getRpcManager().getTransport();
 
-      JChannel counterChannel = forkChannel(transport.getChannel(), VERTX_COUNTER_CHANNEL, cacheManager.getAddress().toString(), new COUNTER());
+      counterChannel = forkChannel(transport.getChannel(), VERTX_COUNTER_CHANNEL, this.getNodeID(), new COUNTER());
       counterService = new CounterService(counterChannel);
 
-      JChannel lockChannel = forkChannel(transport.getChannel(), VERTX_LOCK_CHANNEL, cacheManager.getAddress().toString(), new SEQUENCER(), new PEER_LOCK());
+      lockChannel = forkChannel(transport.getChannel(), VERTX_LOCK_CHANNEL, this.getNodeID(), new SEQUENCER(), new PEER_LOCK());
       lockService = new LockService(lockChannel);
 
       active = true;
@@ -194,7 +208,7 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
   private ForkChannel forkChannel(Channel mainChannel, String forkStackId, String channelId, Protocol... protocols) {
     try {
       ForkChannel forkChannel = new ForkChannel(mainChannel, forkStackId, channelId, true, ProtocolStack.ABOVE, FRAG2.class, protocols);
-      forkChannel.connect("ignored");
+      forkChannel.connect(clusterName);
       return forkChannel;
     } catch (Exception e) {
       throw new RuntimeException(e);
@@ -210,6 +224,9 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
       if (!active) {
         return null;
       }
+      counterChannel.close();
+      lockChannel.close();
+
       cacheManager.stop();
       cacheManager = null;
       active = false;

@@ -18,52 +18,66 @@ package io.vertx.java.spi.cluster.impl.infinispan.helpers;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.impl.LoggerFactory;
+import io.vertx.java.spi.cluster.impl.infinispan.support.FutureDoneException;
 import org.infinispan.commons.util.concurrent.FutureListener;
 
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-public class FutureListenerHelper<T> implements FutureListener<T>, Handler<AsyncResult<T>> {
+//public class FutureListenerHelper<T> implements FutureListener<T>, Handler<AsyncResult<T>> {
+public class FutureListenerHelper<T> implements FutureListener<T> {
 
-    private Consumer<Throwable> onError;
-    private Stream<Consumer<T>> onSuccess;
+  private final static Logger log = LoggerFactory.getLogger(FutureListenerHelper.class);
 
-    public FutureListenerHelper(Consumer<T> onSuccess, Consumer<Throwable> onError) {
-        this.onSuccess = Stream.of(onSuccess);
-        this.onError = onError;
+  private Consumer<Throwable> onError;
+  private Consumer<T> onSuccess;
+
+  public FutureListenerHelper(Consumer<T> onSuccess, Consumer<Throwable> onError) {
+    this.onSuccess = onSuccess;
+    this.onError = onError;
+  }
+
+  private void done(T v) {
+    this.onSuccess.accept(v);
+  }
+
+  private void error(Throwable value) {
+    this.onError.accept(value);
+  }
+
+  @Override
+  public void futureDone(Future<T> future) {
+    if (future.isDone()) {
+      try {
+        log.debug("Retrieving value from future [" + future + "]");
+        done(future.get());
+      } catch (InterruptedException | ExecutionException e) {
+        log.debug("Retrieving value error. ", e);
+        error(e);
+      }
+    } else {
+      log.debug("FutureDone is called but future is not Done isCancelled=[" + future.isCancelled() + "]");
+      error(null);
     }
+  }
 
-    private void done(T value) {
-        this.onSuccess.forEachOrdered((c) -> c.accept(value));
+/*
+  @Override
+  public void handle(AsyncResult<T> future) {
+    if (future.succeeded()) {
+      log.debug("SUCCESS - Handle async result [" + future + "]");
+      done(future.result());
+    } else {
+      log.debug("ERROR - Handle async result [" + future + "]");
+      error(future.cause());
     }
-
-    private void error(Throwable value) {
-        this.onError.accept(value);
-    }
-
-    @Override
-    public void futureDone(Future<T> future) {
-        if (future.isDone()) {
-            try {
-                done(future.get());
-            } catch (InterruptedException | ExecutionException e) {
-                error(e);
-            }
-        } else {
-            error(null);
-        }
-    }
-
-    @Override
-    public void handle(AsyncResult<T> future) {
-        if (future.succeeded()) {
-            done(future.result());
-        } else {
-            error(future.cause());
-        }
-    }
-
+  }
+*/
 }

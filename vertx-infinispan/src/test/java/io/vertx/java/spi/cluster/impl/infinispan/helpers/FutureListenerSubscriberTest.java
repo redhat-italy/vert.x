@@ -16,7 +16,6 @@
 
 package io.vertx.java.spi.cluster.impl.infinispan.helpers;
 
-import io.vertx.java.spi.cluster.impl.infinispan.helpers.FutureListenerHelper;
 import org.junit.Assert;
 import org.junit.Test;
 

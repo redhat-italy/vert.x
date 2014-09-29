@@ -35,7 +35,4 @@ public class HandlerHelper<V> {
     public final void error(Throwable e) {
         handler.handle(Future.completedFuture(e));
     }
-    public final void fail() {
-        handler.handle(Future.completedFuture());
-    }
 }

@@ -35,26 +35,4 @@ public class InfinispanAsyncClusteredAsynchronousLockTest extends ClusteredAsync
     return new InfinispanAsyncClusterManager();
   }
 
-  @Test
-  public void testLockService() {
-    System.out.println("**********************************************");
-    System.out.println("Start new TEST");
-    getVertx().sharedData().getLock("foo", ar -> {
-      assertTrue(ar.succeeded());
-      long start = System.currentTimeMillis();
-      Lock lock = ar.result();
-      vertx.setTimer(1000, tid -> {
-        lock.release();
-      });
-      vertx.setTimer(1000, tid -> {
-        getVertx().sharedData().getLockWithTimeout("foo", 1000, ar2 -> {
-          assertTrue(ar2.succeeded());
-          // Should be delayed
-          assertTrue(System.currentTimeMillis() - start >= 1000);
-          testComplete();
-        });
-      });
-    });
-    await();
-  }
 }

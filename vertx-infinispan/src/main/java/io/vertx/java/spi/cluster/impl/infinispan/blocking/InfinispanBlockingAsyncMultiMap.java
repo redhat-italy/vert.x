@@ -28,14 +28,14 @@ import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ChoosableIterable;
 
-public class InfinispanAsyncMultiMapBlocking<K, V> implements AsyncMultiMap<K, V> {
+public class InfinispanBlockingAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
-    private static final Logger log = LoggerFactory.getLogger(InfinispanAsyncMultiMapBlocking.class);
+    private static final Logger log = LoggerFactory.getLogger(InfinispanBlockingAsyncMultiMap.class);
 
     private VertxSPI vertx;
     private final Cache<K, ImmutableChoosableSet<V>> cache;
 
-    public InfinispanAsyncMultiMapBlocking(VertxSPI vertx, Cache<K, ImmutableChoosableSet<V>> cache) {
+    public InfinispanBlockingAsyncMultiMap(VertxSPI vertx, Cache<K, ImmutableChoosableSet<V>> cache) {
         this.vertx = vertx;
         this.cache = cache;
     }

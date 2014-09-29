@@ -23,12 +23,13 @@ import org.junit.Test;
 
 public class InfinispanAsyncClusterWideMapTest extends ClusterWideMapTestDifferentNodes {
 
-    @Override
-    protected ClusterManager getClusterManager() {
-        return new InfinispanAsyncClusterManager();
-    }
+  public InfinispanAsyncClusterWideMapTest() {
+    disableThreadChecks();
+  }
 
-    @Test
-    public void testFoo() {
-    }
+  @Override
+  protected ClusterManager getClusterManager() {
+    return new InfinispanAsyncClusterManager();
+  }
+
 }

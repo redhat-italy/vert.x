@@ -23,47 +23,47 @@ import java.util.function.Consumer;
 
 public class CacheAsyncWrapper<K1, V1> {
 
-    private final Cache<K1, V1> cache;
+  private final Cache<K1, V1> cache;
 
-    public CacheAsyncWrapper(Cache<K1, V1> cache) {
-        this.cache = cache;
-    }
+  public CacheAsyncWrapper(Cache<K1, V1> cache) {
+    this.cache = cache;
+  }
 
-    public FutureListenerHelper<Void> clear(Consumer<Void> onSuccess, Consumer<Throwable> onError) {
-        return perform(cache.clearAsync(), onSuccess, onError);
-    }
+  public FutureListenerHelper<Void> clear(Consumer<Void> onSuccess, Consumer<Throwable> onError) {
+    return perform(cache.clearAsync(), onSuccess, onError);
+  }
 
-    public FutureListenerHelper<V1> get(K1 k, Consumer<V1> onSuccess, Consumer<Throwable> onError) {
-        return perform(cache.getAsync(k), onSuccess, onError);
-    }
+  public FutureListenerHelper<V1> get(K1 k, Consumer<V1> onSuccess, Consumer<Throwable> onError) {
+    return perform(cache.getAsync(k), onSuccess, onError);
+  }
 
-    public FutureListenerHelper<V1> put(K1 k, V1 v, Consumer<V1> onSuccess, Consumer<Throwable> onError) {
-        return perform(cache.putAsync(k, v), onSuccess, onError);
-    }
+  public FutureListenerHelper<V1> put(K1 k, V1 v, Consumer<V1> onSuccess, Consumer<Throwable> onError) {
+    return perform(cache.putAsync(k, v), onSuccess, onError);
+  }
 
-    public FutureListenerHelper<V1> putIfAbsent(K1 k, V1 v, Consumer<V1> onSuccess, Consumer<Throwable> onError) {
-        return perform(cache.putIfAbsentAsync(k, v), onSuccess, onError);
-    }
+  public FutureListenerHelper<V1> putIfAbsent(K1 k, V1 v, Consumer<V1> onSuccess, Consumer<Throwable> onError) {
+    return perform(cache.putIfAbsentAsync(k, v), onSuccess, onError);
+  }
 
-    public FutureListenerHelper<V1> replace(K1 k, V1 v, Consumer<V1> onSuccess, Consumer<Throwable> onError) {
-        return perform(cache.replaceAsync(k, v), onSuccess, onError);
-    }
+  public FutureListenerHelper<V1> replace(K1 k, V1 v, Consumer<V1> onSuccess, Consumer<Throwable> onError) {
+    return perform(cache.replaceAsync(k, v), onSuccess, onError);
+  }
 
-    public FutureListenerHelper<Boolean> replace(K1 k, V1 oldValue, V1 newValue, Consumer<Boolean> onSuccess, Consumer<Throwable> onError) {
-        return perform(cache.replaceAsync(k, oldValue, newValue), onSuccess, onError);
-    }
+  public FutureListenerHelper<Boolean> replace(K1 k, V1 oldValue, V1 newValue, Consumer<Boolean> onSuccess, Consumer<Throwable> onError) {
+    return perform(cache.replaceAsync(k, oldValue, newValue), onSuccess, onError);
+  }
 
-    public FutureListenerHelper<V1> remove(K1 k, Consumer<V1> onSuccess, Consumer<Throwable> onError) {
-        return perform(cache.removeAsync(k), onSuccess, onError);
-    }
+  public FutureListenerHelper<V1> remove(K1 k, Consumer<V1> onSuccess, Consumer<Throwable> onError) {
+    return perform(cache.removeAsync(k), onSuccess, onError);
+  }
 
-    public FutureListenerHelper<V1> removeIfPresent(K1 k, Consumer<Boolean> onSuccess, Consumer<Throwable> onError) {
-        return perform(cache.removeAsync(k), (v) -> onSuccess.accept(v != null), onError);
-    }
+  public FutureListenerHelper<V1> removeIfPresent(K1 k, Consumer<Boolean> onSuccess, Consumer<Throwable> onError) {
+    return perform(cache.removeAsync(k), (v) -> onSuccess.accept(v != null), onError);
+  }
 
-    private static <V> FutureListenerHelper<V> perform(NotifyingFuture<V> future, Consumer<V> onSuccess, Consumer<Throwable> onError) {
-        FutureListenerHelper<V> subscriber = new FutureListenerHelper<V>(onSuccess, onError);
-        future.attachListener(subscriber);
-        return subscriber;
-    }
+  private static <V> FutureListenerHelper<V> perform(NotifyingFuture<V> future, Consumer<V> onSuccess, Consumer<Throwable> onError) {
+    FutureListenerHelper<V> subscriber = new FutureListenerHelper<V>(onSuccess, onError);
+    future.attachListener(subscriber);
+    return subscriber;
+  }
 }

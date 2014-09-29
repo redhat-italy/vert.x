@@ -31,7 +31,7 @@ public class InfinispanBlockingClusterManager extends InfinispanClusterManagerBa
     public <K, V> void getAsyncMultiMap(String name, MapOptions options, Handler<AsyncResult<AsyncMultiMap<K, V>>> handler) {
         getVertxSPI().executeBlocking(() -> {
             Cache<K, ImmutableChoosableSet<V>> cache = getCacheManager().<K, ImmutableChoosableSet<V>>getCache(name, true);
-            return new InfinispanAsyncMultiMapBlocking<>(getVertxSPI(), cache);
+            return new InfinispanBlockingAsyncMultiMap<>(getVertxSPI(), cache);
         }, handler);
     }
 
@@ -39,7 +39,7 @@ public class InfinispanBlockingClusterManager extends InfinispanClusterManagerBa
     public <K, V> void getAsyncMap(String name, MapOptions options, Handler<AsyncResult<AsyncMap<K, V>>> handler) {
         getVertxSPI().executeBlocking(() -> {
             Cache<K, V> cache = getCacheManager().<K, V>getCache(name, true);
-            return new InfinispanAsyncMapBlocking<>(getVertxSPI(), cache);
+            return new InfinispanBlockingAsyncMap<>(getVertxSPI(), cache);
         }, handler);
     }
 
