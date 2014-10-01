@@ -24,23 +24,19 @@ import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.java.spi.cluster.impl.infinispan.InfinispanClusterManagerBase;
 import io.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
 import org.infinispan.Cache;
+import org.infinispan.DecoratedCache;
+import org.infinispan.context.Flag;
 
 public class InfinispanBlockingClusterManager extends InfinispanClusterManagerBase {
 
-    @Override
-    public <K, V> void getAsyncMultiMap(String name, MapOptions options, Handler<AsyncResult<AsyncMultiMap<K, V>>> handler) {
-        getVertx().executeBlocking(() -> {
-            Cache<K, ImmutableChoosableSet<V>> cache = getCacheManager().<K, ImmutableChoosableSet<V>>getCache(name, true);
-            return new InfinispanBlockingAsyncMultiMap<>(getVertx(), cache);
-        }, handler);
-    }
+  @Override
+  public <K, V> void getAsyncMultiMap(String name, MapOptions options, Handler<AsyncResult<AsyncMultiMap<K, V>>> handler) {
+    getVertx().executeBlocking(() -> new InfinispanBlockingAsyncMultiMap<>(this.getNodeID(), getVertx(), this.getAsyncCache(name)), handler);
+  }
 
-    @Override
-    public <K, V> void getAsyncMap(String name, MapOptions options, Handler<AsyncResult<AsyncMap<K, V>>> handler) {
-        getVertx().executeBlocking(() -> {
-            Cache<K, V> cache = getCacheManager().<K, V>getCache(name, true);
-            return new InfinispanBlockingAsyncMap<>(getVertx(), cache);
-        }, handler);
-    }
+  @Override
+  public <K, V> void getAsyncMap(String name, MapOptions options, Handler<AsyncResult<AsyncMap<K, V>>> handler) {
+    getVertx().executeBlocking(() -> new InfinispanBlockingAsyncMap<>(getVertx(), this.getAsyncCache(name)), handler);
+  }
 
 }

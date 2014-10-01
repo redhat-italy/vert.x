@@ -30,75 +30,75 @@ import io.vertx.java.spi.cluster.impl.infinispan.helpers.CacheAsyncWrapper;
 
 public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
-    private static final Logger log = LoggerFactory.getLogger(InfinispanAsyncMultiMap.class);
+  private static final Logger log = LoggerFactory.getLogger(InfinispanAsyncMultiMap.class);
 
-    private final CacheAsyncWrapper<K, ImmutableChoosableSet<V>> wrapper;
+  private final CacheAsyncWrapper<K, ImmutableChoosableSet<V>> wrapper;
 
-    public InfinispanAsyncMultiMap(Cache<K, ImmutableChoosableSet<V>> cache) {
-        this.wrapper = new CacheAsyncWrapper<>(cache);
-    }
+  public InfinispanAsyncMultiMap(Cache<K, ImmutableChoosableSet<V>> cache) {
+    this.wrapper = new CacheAsyncWrapper<>(cache);
+  }
 
-    @Override
-    public void get(final K k, final Handler<AsyncResult<ChoosableIterable<V>>> handler) {
-        HandlerHelper<ChoosableIterable<V>> helper = new HandlerHelper<>(handler);
+  @Override
+  public void get(final K k, final Handler<AsyncResult<ChoosableIterable<V>>> handler) {
+    HandlerHelper<ChoosableIterable<V>> helper = new HandlerHelper<>(handler);
 
-        wrapper
-                .get(k,
-                        helper::success,
+    wrapper
+        .get(k,
+            helper::success,
+            helper::error
+        );
+  }
+
+  @Override
+  public void add(final K k, final V v, final Handler<AsyncResult<Void>> handler) {
+    HandlerHelper<Void> helper = new HandlerHelper<>(handler);
+
+    wrapper
+        .get(k,
+            (value) -> {
+              if (value != null) {
+                wrapper
+                    .put(k, value.add(v),
+                        (newValue) -> helper.success(null),
                         helper::error
-                );
-    }
+                    );
+              } else {
+                helper.success(null);
+              }
+            },
+            helper::error
+        );
+  }
 
-    @Override
-    public void add(final K k, final V v, final Handler<AsyncResult<Void>> handler) {
-        HandlerHelper<Void> helper = new HandlerHelper<>(handler);
+  @Override
+  public void remove(K k, V v, Handler<AsyncResult<Boolean>> handler) {
+    HandlerHelper<Boolean> helper = new HandlerHelper<>(handler);
 
-        wrapper
-                .get(k,
-                        (value) -> {
-                            if (value != null) {
-                                wrapper
-                                        .put(k, value.add(v),
-                                                (newValue) -> helper.success(null),
-                                                helper::error
-                                        );
-                            } else {
-                                helper.success(null);
-                            }
-                        },
-                        helper::error
-                );
-    }
+    wrapper
+        .get(k,
+            (value) -> {
+              if (value != null) {
+                if (value.isEmpty()) {
+                  wrapper.removeIfPresent(k,
+                      helper::success,
+                      helper::error
+                  );
+                } else {
+                  wrapper.replace(k, value, value.remove(v),
+                      helper::success,
+                      helper::error
+                  );
+                }
+              } else {
+                helper.success(false);
+              }
+            },
+            helper::error
+        );
+  }
 
-    @Override
-    public void remove(K k, V v, Handler<AsyncResult<Boolean>> handler) {
-        HandlerHelper<Boolean> helper = new HandlerHelper<>(handler);
-
-        wrapper
-                .get(k,
-                        (value) -> {
-                            if (value != null) {
-                                if (value.isEmpty()) {
-                                    wrapper.removeIfPresent(k,
-                                            helper::success,
-                                            helper::error
-                                    );
-                                } else {
-                                    wrapper.replace(k, value, value.remove(v),
-                                            helper::success,
-                                            helper::error
-                                    );
-                                }
-                            } else {
-                                helper.success(false);
-                            }
-                        },
-                        helper::error
-                );
-    }
-
-    @Override
-    public void removeAllForValue(V v, Handler<AsyncResult<Void>> completionHandler) {
-        throw new UnsupportedOperationException("Not yet implemented");
-    }
+  @Override
+  public void removeAllForValue(V v, Handler<AsyncResult<Void>> completionHandler) {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
 }

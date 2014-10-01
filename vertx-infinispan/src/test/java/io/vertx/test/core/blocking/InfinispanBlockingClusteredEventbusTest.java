@@ -16,9 +16,12 @@
 
 package io.vertx.test.core.blocking;
 
+import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.eventbus.MessageCodec;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.java.spi.cluster.impl.infinispan.blocking.InfinispanBlockingClusterManager;
 import io.vertx.test.core.ClusteredEventBusTest;
+import io.vertx.test.core.TestUtils;
 import org.junit.Test;
 
 public class InfinispanBlockingClusteredEventbusTest extends ClusteredEventBusTest {
@@ -28,4 +31,14 @@ public class InfinispanBlockingClusteredEventbusTest extends ClusteredEventBusTe
         return new InfinispanBlockingClusterManager();
     }
 
+  @Test
+  public void testDecoderLocal() throws Exception {
+    startNodes(2);
+    MessageCodec codec = new MyPOJOEncoder2();
+    vertices[0].eventBus().registerCodec(codec);
+    vertices[1].eventBus().registerCodec(codec);
+    String str = TestUtils.randomAlphaString(100);
+    MyPOJO pojo = new MyPOJO(str);
+    testSend(pojo, pojo, null, new DeliveryOptions().setCodecName(codec.name()));
+  }
 }

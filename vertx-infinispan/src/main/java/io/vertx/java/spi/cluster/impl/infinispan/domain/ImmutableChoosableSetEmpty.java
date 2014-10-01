@@ -21,43 +21,49 @@ import java.util.Iterator;
 
 public class ImmutableChoosableSetEmpty<T> implements ImmutableChoosableSet<T> {
 
-    public static final ImmutableChoosableSet emptySet = new ImmutableChoosableSetEmpty();
+  public static final ImmutableChoosableSet emptySet = new ImmutableChoosableSetEmpty();
 
-    private ImmutableChoosableSetEmpty() {
-    }
+  private ImmutableChoosableSetEmpty() {
+  }
 
-    @Override
-    public ImmutableChoosableSet<T> add(T value) {
-        return new ImmutableChoosableSetImpl<T>(value);
-    }
+  @Override
+  public ImmutableChoosableSet<T> add(T value) {
+    return new ImmutableChoosableSetImpl<T>(value);
+  }
 
-    @Override
-    public ImmutableChoosableSet<T> remove(T value) {
-        return this;
-    }
+  @Override
+  public ImmutableChoosableSet<T> remove(T value) {
+    return this;
+  }
 
-    @Override
-    public T head() {
-        return null;
-    }
+  @Override
+  public T head() {
+    return null;
+  }
 
-    @Override
-    public ImmutableChoosableSet<T> tail() {
-        return this;
-    }
+  @Override
+  public ImmutableChoosableSet<T> tail() {
+    return this;
+  }
 
-    @Override
-    public boolean isEmpty() {
-        return true;
-    }
+  @Override
+  public boolean isEmpty() {
+    return true;
+  }
 
-    @Override
-    public T choose() {
-        return null;
-    }
+  @Override
+  public T choose() {
+    return null;
+  }
 
-    @Override
-    public Iterator<T> iterator() {
-        return Collections.emptyIterator();
-    }
+  @Override
+  public Iterator<T> iterator() {
+    return Collections.emptyIterator();
+  }
+
+
+  @Override
+  public String toString() {
+    return "[]";
+  }
 }

@@ -18,7 +18,6 @@ package io.vertx.java.spi.cluster.impl.infinispan;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-import io.vertx.core.VertxException;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.shareddata.Counter;
@@ -26,15 +25,17 @@ import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.core.spi.cluster.NodeListener;
 import io.vertx.core.spi.cluster.VertxSPI;
 import io.vertx.java.spi.cluster.impl.infinispan.domain.InfinispanCounterImpl;
+import io.vertx.java.spi.cluster.impl.infinispan.domain.InfinispanLockImpl;
 import io.vertx.java.spi.cluster.impl.infinispan.domain.serializer.ImmutableChoosableSetSerializer;
 import io.vertx.java.spi.cluster.impl.infinispan.listeners.CacheManagerListener;
+import io.vertx.java.spi.cluster.impl.jgroups.protocols.VERTX_LOCK;
+import org.infinispan.Cache;
 import org.infinispan.configuration.cache.CacheMode;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
 import org.infinispan.configuration.global.GlobalConfiguration;
 import org.infinispan.configuration.global.GlobalConfigurationBuilder;
 import org.infinispan.manager.DefaultCacheManager;
-import org.infinispan.manager.EmbeddedCacheManager;
 import org.infinispan.remoting.transport.Address;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
 import org.jgroups.Channel;
@@ -42,7 +43,8 @@ import org.jgroups.JChannel;
 import org.jgroups.blocks.atomic.CounterService;
 import org.jgroups.blocks.locking.LockService;
 import org.jgroups.fork.ForkChannel;
-import org.jgroups.protocols.*;
+import org.jgroups.protocols.COUNTER;
+import org.jgroups.protocols.FRAG2;
 import org.jgroups.stack.Protocol;
 import org.jgroups.stack.ProtocolStack;
 
@@ -50,20 +52,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 
 public abstract class InfinispanClusterManagerBase implements ClusterManager {
 
-  private final static Logger LOG = LoggerFactory.getLogger(InfinispanClusterManagerBase.class);
+  private final static Logger log = LoggerFactory.getLogger(InfinispanClusterManagerBase.class);
   public static final String VERTX_COUNTER_CHANNEL = "__vertx__counter_channel";
   public static final String VERTX_LOCK_CHANNEL = "__vertx__lock_channel";
 
-  private final Configuration syncConfiguration;
-  private final Configuration asyncConfiguration;
-
-  private EmbeddedCacheManager cacheManager;
+  private DefaultCacheManager cacheManager;
   private VertxSPI vertxSPI;
   private CounterService counterService;
   private LockService lockService;
@@ -73,27 +70,8 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
   private JChannel lockChannel;
   private JChannel counterChannel;
 
-  private final String _id = org.jgroups.util.UUID.randomUUID().toString();
-  private final String clusterName = "ISPN";
-  private final String cacheManagerName = "CacheManager-" + _id;
-
-  public InfinispanClusterManagerBase() {
-    this.syncConfiguration = new ConfigurationBuilder()
-        .clustering().cacheMode(CacheMode.DIST_SYNC)
-        .hash().numOwners(2)
-        .build();
-    this.asyncConfiguration = new ConfigurationBuilder()
-        .clustering().cacheMode(CacheMode.DIST_ASYNC)
-        .hash().numOwners(2)
-        .build();
-  }
-
   protected final VertxSPI getVertx() {
     return vertxSPI;
-  }
-
-  protected final EmbeddedCacheManager getCacheManager() {
-    return cacheManager;
   }
 
   @Override
@@ -103,7 +81,7 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
 
   @Override
   public final String getNodeID() {
-    return _id;
+    return cacheManager.getAddress().toString();
   }
 
   @Override
@@ -118,7 +96,9 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
 
   @Override
   public final void nodeListener(NodeListener listener) {
-    LOG.debug(String.format("NodeListener [%s]", listener.toString()));
+    if (log.isDebugEnabled()) {
+      log.debug(String.format("Add node listener [%s]", listener.toString()));
+    }
     this.cacheManager.addListener(new CacheManagerListener(listener));
   }
 
@@ -126,22 +106,9 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
   public final void getLockWithTimeout(String name, long timeout, Handler<AsyncResult<io.vertx.core.shareddata.Lock>> handler) {
     vertxSPI.executeBlocking(
         () -> {
-          try {
-            LOG.debug(String.format("[%s] - Lock Service", this.getNodeID()));
-            Lock lock = lockService.getLock(name);
-            LOG.debug(String.format("[%s] - TRY LOCK on [%s] Thread [%d - %s]", this.getNodeID(), lock, Thread.currentThread().getId(), Thread.currentThread().getName()));
-            if (lock.tryLock(timeout, TimeUnit.MILLISECONDS)) {
-              LOG.debug(String.format("[%s] - LOCKED on [%s] Thread [%d - %s]", this.getNodeID(), lock, Thread.currentThread().getId(), Thread.currentThread().getName()));
-              return (io.vertx.core.shareddata.Lock) () -> {
-                LOG.debug(String.format("[%s] - TO BE UNLOCKED on [%s] Thread [%d - %s]", this.getNodeID(), lock, Thread.currentThread().getId(), Thread.currentThread().getName()));
-                lock.unlock();
-                LOG.debug(String.format("[%s] - UNLOCKED on [%s] Thread [%d - %s]", this.getNodeID(), lock, Thread.currentThread().getId(), Thread.currentThread().getName()));
-              };
-            }
-          } catch (InterruptedException e) {
-          }
-          LOG.error(String.format("[%s] - Timed out waiting to get lock [%s]", this.getNodeID(), name));
-          throw new VertxException("Timed out waiting to get lock " + name);
+          InfinispanLockImpl infinispanLock = new InfinispanLockImpl(lockService, name);
+          infinispanLock.acquire(timeout);
+          return infinispanLock;
         },
         handler
     );
@@ -157,8 +124,11 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
 
   @Override
   public final <K, V> Map<K, V> getSyncMap(String name) {
-    getCacheManager().defineConfiguration(name, syncConfiguration);
-    return getCacheManager().<K, V>getCache(name, true);
+    return cacheManager.<K, V>getCache(name, true);
+  }
+
+  protected final <K, V> Cache<K, V> getAsyncCache(String name) {
+    return cacheManager.<K, V>getCache(name, true);
   }
 
   @Override
@@ -167,58 +137,9 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
   }
 
   @Override
-  public final void join(Handler<AsyncResult<Void>> handler) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(String.format("JOIN [%s]", this.toString()));
-    }
-    vertxSPI.executeBlocking(() -> {
-      if (active) {
-        return null;
-      }
-      active = true;
-
-      GlobalConfiguration globalConfiguration = new GlobalConfigurationBuilder()
-          .clusteredDefault()
-          .transport()
-            .addProperty("configurationFile", "jgroups-udp.xml")
-            .clusterName(clusterName)
-          .globalJmxStatistics()
-            .allowDuplicateDomains(true)
-//            .cacheManagerName(cacheManagerName)
-          .enable()
-          .serialization()
-          .addAdvancedExternalizer(new ImmutableChoosableSetSerializer())
-          .build();
-      cacheManager = new DefaultCacheManager(globalConfiguration, asyncConfiguration);
-      cacheManager.start();
-
-      JGroupsTransport transport = (JGroupsTransport) cacheManager.getCache().getAdvancedCache().getRpcManager().getTransport();
-
-      lockChannel = forkChannel(transport.getChannel(), VERTX_LOCK_CHANNEL, this.getNodeID(), new PEER_LOCK(), new SEQUENCER());
-//      lockChannel = forkChannel(transport.getChannel(), VERTX_LOCK_CHANNEL, this.getNodeID(), new CENTRAL_LOCK(), new STATS());
-      lockService = new LockService(lockChannel);
-
-      counterChannel = forkChannel(transport.getChannel(), VERTX_COUNTER_CHANNEL, this.getNodeID(), new COUNTER());
-      counterService = new CounterService(counterChannel);
-
-      return null;
-    }, handler);
-  }
-
-  private ForkChannel forkChannel(Channel mainChannel, String forkStackId, String channelId, Protocol... protocols) {
-    try {
-      ForkChannel forkChannel = new ForkChannel(mainChannel, forkStackId, channelId, true, ProtocolStack.ABOVE, FRAG2.class, protocols);
-      forkChannel.connect(clusterName);
-      return forkChannel;
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  @Override
   public final void leave(Handler<AsyncResult<Void>> handler) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(String.format("LEAVE Active[%s] [%s]", active, this.toString()));
+    if (log.isDebugEnabled()) {
+      log.debug(String.format("LEAVE Active[%s] [%s]", active, this.toString()));
     }
     vertxSPI.executeBlocking(() -> {
       if (!active) {
@@ -233,5 +154,57 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
       cacheManager = null;
       return null;
     }, handler);
+  }
+
+  @Override
+  public final void join(Handler<AsyncResult<Void>> handler) {
+    if (log.isDebugEnabled()) {
+      log.debug(String.format("Join to the cluster [%s]", this.toString()));
+    }
+    vertxSPI.executeBlocking(() -> {
+      if (active) {
+        return null;
+      }
+      active = true;
+
+      GlobalConfiguration globalConfiguration = new GlobalConfigurationBuilder()
+          .clusteredDefault()
+          .transport()
+          .addProperty("configurationFile", "jgroups-udp.xml")
+          .globalJmxStatistics()
+          .allowDuplicateDomains(true)
+//          .enable()
+          .disable()
+          .serialization()
+          .addAdvancedExternalizer(new ImmutableChoosableSetSerializer())
+          .build();
+      Configuration syncConfiguration = new ConfigurationBuilder()
+          .clustering().cacheMode(CacheMode.DIST_SYNC)
+          .hash().numOwners(2)
+          .build();
+
+      cacheManager = new DefaultCacheManager(globalConfiguration, syncConfiguration);
+      cacheManager.start();
+
+      JGroupsTransport transport = (JGroupsTransport) cacheManager.getCache().getAdvancedCache().getRpcManager().getTransport();
+
+      lockChannel = forkChannel(transport.getChannel(), VERTX_LOCK_CHANNEL, this.getNodeID(), new VERTX_LOCK());
+      lockService = new LockService(lockChannel);
+
+      counterChannel = forkChannel(transport.getChannel(), VERTX_COUNTER_CHANNEL, this.getNodeID(), new COUNTER());
+      counterService = new CounterService(counterChannel);
+
+      return null;
+    }, handler);
+  }
+
+  private ForkChannel forkChannel(Channel mainChannel, String forkStackId, String channelId, Protocol... protocols) {
+    try {
+      ForkChannel forkChannel = new ForkChannel(mainChannel, forkStackId, channelId, true, ProtocolStack.ABOVE, FRAG2.class, protocols);
+      forkChannel.connect("ignored");
+      return forkChannel;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }

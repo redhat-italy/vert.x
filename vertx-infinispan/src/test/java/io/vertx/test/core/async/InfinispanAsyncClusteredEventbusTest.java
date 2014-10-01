@@ -16,9 +16,12 @@
 
 package io.vertx.test.core.async;
 
+import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.eventbus.MessageCodec;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.java.spi.cluster.impl.infinispan.async.InfinispanAsyncClusterManager;
 import io.vertx.test.core.ClusteredEventBusTest;
+import io.vertx.test.core.TestUtils;
 import org.junit.Test;
 
 public class InfinispanAsyncClusteredEventbusTest extends ClusteredEventBusTest {
