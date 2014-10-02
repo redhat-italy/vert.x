@@ -14,7 +14,7 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.java.spi.cluster.impl.infinispan.blocking;
+package io.vertx.java.spi.cluster.impl.infinispan;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
@@ -25,15 +25,15 @@ import io.vertx.core.spi.cluster.VertxSPI;
 import io.vertx.java.spi.cluster.impl.logging.PrefixLogDelegate;
 import org.infinispan.Cache;
 
-public class InfinispanBlockingAsyncMap<K, V> implements AsyncMap<K, V> {
+public class InfinispanAsyncMap<K, V> implements AsyncMap<K, V> {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(InfinispanBlockingAsyncMap.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(InfinispanAsyncMap.class);
   private final Logger log;
 
   private VertxSPI vertx;
   private Cache<K, V> map;
 
-  public InfinispanBlockingAsyncMap(String node, VertxSPI vertx, Cache<K, V> map) {
+  public InfinispanAsyncMap(String node, VertxSPI vertx, Cache<K, V> map) {
     this.log = new Logger(new PrefixLogDelegate(LOGGER, String.format("Node[%s] - ", node)));
     this.vertx = vertx;
     this.map = map;

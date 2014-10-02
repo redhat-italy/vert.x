@@ -14,7 +14,7 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.java.spi.cluster.impl.infinispan.blocking;
+package io.vertx.java.spi.cluster.impl.infinispan;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
@@ -28,16 +28,16 @@ import io.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSetImp
 import io.vertx.java.spi.cluster.impl.logging.PrefixLogDelegate;
 import org.infinispan.Cache;
 
-public class InfinispanBlockingAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
+public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(InfinispanBlockingAsyncMultiMap.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(InfinispanAsyncMultiMap.class);
 
   private final Logger log;
 
   private final VertxSPI vertx;
   private final Cache<K, ImmutableChoosableSet<V>> cache;
 
-  public InfinispanBlockingAsyncMultiMap(String node, VertxSPI vertx, Cache<K, ImmutableChoosableSet<V>> cache) {
+  public InfinispanAsyncMultiMap(String node, VertxSPI vertx, Cache<K, ImmutableChoosableSet<V>> cache) {
     this.log = new Logger(new PrefixLogDelegate(LOGGER, String.format("Node[%s] - ", node)));
     this.vertx = vertx;
     this.cache = cache;

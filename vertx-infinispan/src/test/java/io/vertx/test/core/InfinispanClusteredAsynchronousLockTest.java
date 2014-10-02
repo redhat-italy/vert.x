@@ -14,25 +14,16 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.test.core.async;
+package io.vertx.test.core;
 
-import io.vertx.core.shareddata.Lock;
-import io.vertx.core.shareddata.SharedData;
 import io.vertx.core.spi.cluster.ClusterManager;
-import io.vertx.java.spi.cluster.impl.infinispan.async.InfinispanAsyncClusterManager;
-import io.vertx.test.core.ClusteredAsynchronousLockTest;
-import org.junit.Before;
-import org.junit.Test;
+import io.vertx.java.spi.cluster.impl.infinispan.InfinispanClusterManager;
 
-public class InfinispanAsyncClusteredAsynchronousLockTest extends ClusteredAsynchronousLockTest {
+public class InfinispanClusteredAsynchronousLockTest extends ClusteredAsynchronousLockTest {
 
-  public InfinispanAsyncClusteredAsynchronousLockTest() {
-    disableThreadChecks();
-  }
-
-  @Override
-  protected ClusterManager getClusterManager() {
-    return new InfinispanAsyncClusterManager();
-  }
+    @Override
+    protected ClusterManager getClusterManager() {
+        return new InfinispanClusterManager();
+    }
 
 }

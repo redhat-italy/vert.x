@@ -14,21 +14,16 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.test.core.blocking;
+package io.vertx.test.core;
 
 import io.vertx.core.spi.cluster.ClusterManager;
-import io.vertx.java.spi.cluster.impl.infinispan.blocking.InfinispanBlockingClusterManager;
-import io.vertx.test.core.HATest;
-import org.junit.Test;
+import io.vertx.java.spi.cluster.impl.infinispan.InfinispanClusterManager;
 
-public class InfinispanBlockingHATest extends HATest {
+public class InfinispanComplexHATest extends ComplexHATest {
 
     @Override
     protected ClusterManager getClusterManager() {
-        return new InfinispanBlockingClusterManager();
+        return new InfinispanClusterManager();
     }
 
-    @Test
-    public void testFoo() {
-    }
 }

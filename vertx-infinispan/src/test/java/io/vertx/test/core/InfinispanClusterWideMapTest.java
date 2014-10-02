@@ -14,11 +14,15 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.java.spi.cluster.impl.infinispan.support;
+package io.vertx.test.core;
 
-public class AsyncResultFailFastException extends RuntimeException {
+import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.java.spi.cluster.impl.infinispan.InfinispanClusterManager;
 
-    public AsyncResultFailFastException(String message, Throwable e) {
-        super(message, e);
+public class InfinispanClusterWideMapTest extends ClusterWideMapTestDifferentNodes {
+
+    @Override
+    protected ClusterManager getClusterManager() {
+        return new InfinispanClusterManager();
     }
 }

@@ -14,11 +14,16 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.java.spi.cluster.impl.infinispan.support;
+package io.vertx.test.core;
 
-public class FutureDoneException extends Exception {
+import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.java.spi.cluster.impl.infinispan.InfinispanClusterManager;
 
-  public FutureDoneException(Throwable cause) {
-    super(cause);
-  }
+public class InfinispanHATest extends HATest {
+
+    @Override
+    protected ClusterManager getClusterManager() {
+        return new InfinispanClusterManager();
+    }
+
 }

@@ -18,6 +18,7 @@ package io.vertx.java.spi.cluster.impl.infinispan;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.core.VertxException;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
@@ -33,7 +34,6 @@ import io.vertx.java.spi.cluster.impl.infinispan.domain.InfinispanLockImpl;
 import io.vertx.java.spi.cluster.impl.infinispan.domain.serializer.ImmutableChoosableSetSerializer;
 import io.vertx.java.spi.cluster.impl.infinispan.listeners.CacheManagerListener;
 import io.vertx.java.spi.cluster.impl.jgroups.protocols.VERTX_LOCK;
-import org.infinispan.Cache;
 import org.infinispan.configuration.cache.CacheMode;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
@@ -51,6 +51,7 @@ import org.jgroups.protocols.COUNTER;
 import org.jgroups.protocols.FRAG2;
 import org.jgroups.stack.Protocol;
 import org.jgroups.stack.ProtocolStack;
+import org.jgroups.util.UUID;
 
 import java.util.Collections;
 import java.util.List;
@@ -58,9 +59,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public abstract class InfinispanClusterManagerBase implements ClusterManager {
+public class InfinispanClusterManager implements ClusterManager {
 
-  private final static Logger log = LoggerFactory.getLogger(InfinispanClusterManagerBase.class);
+  private final static Logger log = LoggerFactory.getLogger(InfinispanClusterManager.class);
   public static final String VERTX_COUNTER_CHANNEL = "__vertx__counter_channel";
   public static final String VERTX_LOCK_CHANNEL = "__vertx__lock_channel";
 
@@ -74,13 +75,7 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
   private JChannel lockChannel;
   private JChannel counterChannel;
 
-  protected abstract <K, V> AsyncMultiMap<K, V> getAsyncMultiMap(Cache<K, ImmutableChoosableSet<V>> cache);
-
-  protected abstract <K, V> AsyncMap<K, V> getAsyncMap(Cache<K, V> cache);
-
-  protected final VertxSPI getVertx() {
-    return vertxSPI;
-  }
+  private final String cacheManagerName = UUID.randomUUID().toString();
 
   @Override
   public final void setVertx(VertxSPI vertxSPI) {
@@ -115,8 +110,15 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
     vertxSPI.executeBlocking(
         () -> {
           InfinispanLockImpl infinispanLock = new InfinispanLockImpl(lockService, name);
-          infinispanLock.acquire(timeout);
-          return infinispanLock;
+          if (infinispanLock.acquire(timeout)) {
+            if (log.isDebugEnabled()) {
+              log.debug(String.format("Lock acquired on [%s]", name));
+            }
+            return infinispanLock;
+          } else {
+            log.error(String.format("Timed out waiting to get lock [%s]", name));
+            throw new VertxException(String.format("Timed out waiting to get lock [%s]", name));
+          }
         },
         handler
     );
@@ -138,14 +140,14 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
   @Override
   public final <K, V> void getAsyncMultiMap(String name, MapOptions options, Handler<AsyncResult<AsyncMultiMap<K, V>>> handler) {
     vertxSPI.executeBlocking(
-        () -> this.getAsyncMultiMap(cacheManager.<K, ImmutableChoosableSet<V>>getCache(name, true)),
+        () -> new InfinispanAsyncMultiMap<>(this.getNodeID(), vertxSPI, cacheManager.<K, ImmutableChoosableSet<V>>getCache(name, true)),
         handler);
   }
 
   @Override
   public final <K, V> void getAsyncMap(String name, MapOptions options, Handler<AsyncResult<AsyncMap<K, V>>> handler) {
     vertxSPI.executeBlocking(
-        () -> this.getAsyncMap(cacheManager.<K, V>getCache(name, true)),
+        () -> new InfinispanAsyncMap<>(this.getNodeID(), vertxSPI, cacheManager.<K, V>getCache(name, true)),
         handler);
   }
 
@@ -188,7 +190,7 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
       GlobalConfiguration globalConfiguration = new GlobalConfigurationBuilder()
           .clusteredDefault()
           .transport().addProperty("configurationFile", "jgroups-udp.xml")
-          .globalJmxStatistics().allowDuplicateDomains(true).disable()
+          .globalJmxStatistics().cacheManagerName(cacheManagerName).allowDuplicateDomains(true).disable()
           .serialization().addAdvancedExternalizer(new ImmutableChoosableSetSerializer())
           .build();
 

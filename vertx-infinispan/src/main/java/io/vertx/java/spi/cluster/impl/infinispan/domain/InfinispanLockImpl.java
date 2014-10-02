@@ -33,20 +33,15 @@ public class InfinispanLockImpl implements io.vertx.core.shareddata.Lock {
     lock = lockService.getLock(name);
   }
 
-  public void acquire(long timeout) {
+  public boolean acquire(long timeout) {
     try {
       if (log.isDebugEnabled()) {
         log.debug(String.format("Aquire lock on [%s] with timeout [%d]", lock, timeout));
       }
-      if (lock.tryLock(timeout, TimeUnit.MILLISECONDS)) {
-        if (log.isDebugEnabled()) {
-          log.debug(String.format("Lock acquired on [%s]", lock));
-        }
-      }
+      return lock.tryLock(timeout, TimeUnit.MILLISECONDS);
     } catch (InterruptedException e) {
     }
-    log.error(String.format("Timed out waiting to get lock [%s]", lock));
-    throw new VertxException(String.format("Timed out waiting to get lock [%s]", lock));
+    return false;
   }
 
   @Override
