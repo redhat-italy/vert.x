@@ -23,18 +23,23 @@ import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ChoosableIterable;
 import io.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
+import io.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSetEmpty;
+import io.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSetImpl;
 import io.vertx.java.spi.cluster.impl.infinispan.helpers.HandlerHelper;
+import io.vertx.java.spi.cluster.impl.logging.PrefixLogDelegate;
 import org.infinispan.Cache;
 import io.vertx.java.spi.cluster.impl.infinispan.helpers.CacheAsyncWrapper;
 
 
 public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
-  private static final Logger log = LoggerFactory.getLogger(InfinispanAsyncMultiMap.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(InfinispanAsyncMultiMap.class);
+  private final Logger log;
 
   private final CacheAsyncWrapper<K, ImmutableChoosableSet<V>> wrapper;
 
-  public InfinispanAsyncMultiMap(Cache<K, ImmutableChoosableSet<V>> cache) {
+  public InfinispanAsyncMultiMap(String node, Cache<K, ImmutableChoosableSet<V>> cache) {
+    this.log = new Logger(new PrefixLogDelegate(LOGGER, String.format("Node[%s] - ", node)));
     this.wrapper = new CacheAsyncWrapper<>(cache);
   }
 
@@ -53,18 +58,25 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
   public void add(final K k, final V v, final Handler<AsyncResult<Void>> handler) {
     HandlerHelper<Void> helper = new HandlerHelper<>(handler);
 
+    if(log.isDebugEnabled()) {
+      log.debug(String.format("MultiMap add Key[%s] Value[%s]", k, v));
+    }
     wrapper
         .get(k,
             (value) -> {
-              if (value != null) {
-                wrapper
-                    .put(k, value.add(v),
-                        (newValue) -> helper.success(null),
-                        helper::error
-                    );
+              if (value == null) {
+                value = new ImmutableChoosableSetImpl<V>(v);
               } else {
-                helper.success(null);
+                value = value.add(v);
               }
+              if(log.isDebugEnabled()) {
+                log.debug(String.format("MultiMap put new value for Key[%s] Value[%s]", k, value));
+              }
+              wrapper
+                  .put(k, value,
+                      (newValue) -> helper.success(null),
+                      helper::error
+                  );
             },
             helper::error
         );

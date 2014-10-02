@@ -22,16 +22,19 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.spi.cluster.VertxSPI;
+import io.vertx.java.spi.cluster.impl.logging.PrefixLogDelegate;
 import org.infinispan.Cache;
 
 public class InfinispanBlockingAsyncMap<K, V> implements AsyncMap<K, V> {
 
-  private final static Logger log = LoggerFactory.getLogger(InfinispanBlockingAsyncMap.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(InfinispanBlockingAsyncMap.class);
+  private final Logger log;
 
   private VertxSPI vertx;
   private Cache<K, V> map;
 
-  public InfinispanBlockingAsyncMap(VertxSPI vertx, Cache<K, V> map) {
+  public InfinispanBlockingAsyncMap(String node, VertxSPI vertx, Cache<K, V> map) {
+    this.log = new Logger(new PrefixLogDelegate(LOGGER, String.format("Node[%s] - ", node)));
     this.vertx = vertx;
     this.map = map;
   }

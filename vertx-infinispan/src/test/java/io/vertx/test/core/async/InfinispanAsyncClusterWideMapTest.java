@@ -16,6 +16,7 @@
 
 package io.vertx.test.core.async;
 
+import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.java.spi.cluster.impl.infinispan.async.InfinispanAsyncClusterManager;
 import io.vertx.test.core.ClusterWideMapTestDifferentNodes;
@@ -30,6 +31,42 @@ public class InfinispanAsyncClusterWideMapTest extends ClusterWideMapTestDiffere
   @Override
   protected ClusterManager getClusterManager() {
     return new InfinispanAsyncClusterManager();
+  }
+
+  @Test
+  public void testBoolean() {
+    String k = "foo";
+    Boolean v = true;
+    Boolean other = false;
+
+    getVertx().sharedData().<String, Boolean>getClusterWideMap("foo", ar -> {
+      assertTrue(ar.succeeded());
+      AsyncMap<String, Boolean> map = ar.result();
+      map.put(k, v, ar2 -> {
+        assertTrue(ar2.succeeded());
+        assertNull(ar2.result());
+        getVertx().sharedData().<String, Boolean>getClusterWideMap("foo", ar3 -> {
+          AsyncMap<String, Boolean> map2 = ar.result();
+          map2.replace(k, other, ar4 -> {
+            assertEquals(v, ar4.result());
+            map2.get(k, ar5 -> {
+              assertEquals(other, ar5.result());
+              map2.remove(k, ar6 -> {
+                assertTrue(ar6.succeeded());
+                map2.replace(k, other, ar7 -> {
+                  assertNull(ar7.result());
+                  map2.get(k, ar8 -> {
+                    assertNull(ar8.result());
+                    testComplete();
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+    await();
   }
 
 }

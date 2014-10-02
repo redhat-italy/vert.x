@@ -22,21 +22,25 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.java.spi.cluster.impl.infinispan.helpers.HandlerHelper;
+import io.vertx.java.spi.cluster.impl.logging.PrefixLogDelegate;
 import org.infinispan.Cache;
 import io.vertx.java.spi.cluster.impl.infinispan.helpers.CacheAsyncWrapper;
 
 public class InfinispanAsyncMap<K, V> implements AsyncMap<K, V> {
 
-  private final static Logger log = LoggerFactory.getLogger(InfinispanAsyncMap.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(InfinispanAsyncMap.class);
+
+  private final Logger log;
   private final CacheAsyncWrapper<K, V> wrapper;
 
-  public InfinispanAsyncMap(Cache<K, V> cache) {
+  public InfinispanAsyncMap(String node, Cache<K, V> cache) {
+    this.log = new Logger(new PrefixLogDelegate(LOGGER, String.format("Node[%s] - ", node)));
     this.wrapper = new CacheAsyncWrapper<>(cache);
   }
 
   @Override
   public void get(final K k, Handler<AsyncResult<V>> handler) {
-    log.debug("ASYNC MAP: GET for key [" + k + "]");
+    log.debug(String.format("ASYNC MAP: GET for key [%s]", k));
     HandlerHelper<V> helper = new HandlerHelper<>(handler);
 
     wrapper

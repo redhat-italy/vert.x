@@ -16,13 +16,14 @@
 
 package io.vertx.java.spi.cluster.impl.jgroups.protocols;
 
+import org.jgroups.conf.ClassConfigurator;
 import org.jgroups.protocols.CENTRAL_LOCK;
 import org.jgroups.util.Owner;
 
 public class VERTX_LOCK extends CENTRAL_LOCK {
 
   static {
-
+    ClassConfigurator.addProtocol((short) 1000, VERTX_LOCK.class);
   }
 
   public VERTX_LOCK() {

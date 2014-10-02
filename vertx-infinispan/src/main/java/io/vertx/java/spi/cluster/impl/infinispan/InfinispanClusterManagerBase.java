@@ -20,10 +20,14 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
+import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.shareddata.Counter;
+import io.vertx.core.shareddata.MapOptions;
+import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.core.spi.cluster.NodeListener;
 import io.vertx.core.spi.cluster.VertxSPI;
+import io.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
 import io.vertx.java.spi.cluster.impl.infinispan.domain.InfinispanCounterImpl;
 import io.vertx.java.spi.cluster.impl.infinispan.domain.InfinispanLockImpl;
 import io.vertx.java.spi.cluster.impl.infinispan.domain.serializer.ImmutableChoosableSetSerializer;
@@ -69,6 +73,10 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
 
   private JChannel lockChannel;
   private JChannel counterChannel;
+
+  protected abstract <K, V> AsyncMultiMap<K, V> getAsyncMultiMap(Cache<K, ImmutableChoosableSet<V>> cache);
+
+  protected abstract <K, V> AsyncMap<K, V> getAsyncMap(Cache<K, V> cache);
 
   protected final VertxSPI getVertx() {
     return vertxSPI;
@@ -127,8 +135,18 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
     return cacheManager.<K, V>getCache(name, true);
   }
 
-  protected final <K, V> Cache<K, V> getAsyncCache(String name) {
-    return cacheManager.<K, V>getCache(name, true);
+  @Override
+  public final <K, V> void getAsyncMultiMap(String name, MapOptions options, Handler<AsyncResult<AsyncMultiMap<K, V>>> handler) {
+    vertxSPI.executeBlocking(
+        () -> this.getAsyncMultiMap(cacheManager.<K, ImmutableChoosableSet<V>>getCache(name, true)),
+        handler);
+  }
+
+  @Override
+  public final <K, V> void getAsyncMap(String name, MapOptions options, Handler<AsyncResult<AsyncMap<K, V>>> handler) {
+    vertxSPI.executeBlocking(
+        () -> this.getAsyncMap(cacheManager.<K, V>getCache(name, true)),
+        handler);
   }
 
   @Override
@@ -169,15 +187,11 @@ public abstract class InfinispanClusterManagerBase implements ClusterManager {
 
       GlobalConfiguration globalConfiguration = new GlobalConfigurationBuilder()
           .clusteredDefault()
-          .transport()
-          .addProperty("configurationFile", "jgroups-udp.xml")
-          .globalJmxStatistics()
-          .allowDuplicateDomains(true)
-//          .enable()
-          .disable()
-          .serialization()
-          .addAdvancedExternalizer(new ImmutableChoosableSetSerializer())
+          .transport().addProperty("configurationFile", "jgroups-udp.xml")
+          .globalJmxStatistics().allowDuplicateDomains(true).disable()
+          .serialization().addAdvancedExternalizer(new ImmutableChoosableSetSerializer())
           .build();
+
       Configuration syncConfiguration = new ConfigurationBuilder()
           .clustering().cacheMode(CacheMode.DIST_SYNC)
           .hash().numOwners(2)

@@ -16,68 +16,60 @@
 
 package io.vertx.java.spi.cluster.impl.infinispan.helpers;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
-import io.vertx.java.spi.cluster.impl.infinispan.support.FutureDoneException;
+import org.infinispan.commons.util.concurrent.BaseNotifyingFuture;
 import org.infinispan.commons.util.concurrent.FutureListener;
+import org.infinispan.commons.util.concurrent.NotifyingFutureAdaptor;
 
-import java.util.Optional;
+import java.lang.reflect.Field;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.FutureTask;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
+import java.util.function.Supplier;
 
-//public class FutureListenerHelper<T> implements FutureListener<T>, Handler<AsyncResult<T>> {
 public class FutureListenerHelper<T> implements FutureListener<T> {
 
   private final static Logger log = LoggerFactory.getLogger(FutureListenerHelper.class);
 
-  private Consumer<Throwable> onError;
-  private Consumer<T> onSuccess;
+  private final Consumer<T> onSuccess;
+  private final Consumer<Throwable> onError;
 
   public FutureListenerHelper(Consumer<T> onSuccess, Consumer<Throwable> onError) {
     this.onSuccess = onSuccess;
     this.onError = onError;
   }
 
-  private void done(T v) {
-    this.onSuccess.accept(v);
-  }
-
-  private void error(Throwable value) {
-    this.onError.accept(value);
-  }
-
   @Override
   public void futureDone(Future<T> future) {
-    if (future.isDone()) {
-      try {
-        log.debug("Retrieving value from future [" + future + "]");
-        done(future.get());
-      } catch (InterruptedException | ExecutionException e) {
-        log.debug("Retrieving value error. ", e);
-        error(e);
+    try {
+      logDebug(() -> String.format("Retrieving value from future[%s] isDone[%s]", future.getClass().getName(), future.isDone()));
+      if (future.isCancelled()) {
+        logDebug(() -> String.format("FutureDone is called but future is not Done isCancelled=[%s]", future.isCancelled()));
+        this.onError.accept(null);
+      } else {
+        T t = future.get();
+        logDebug(() -> String.format("Future value is [%s]", t));
+        this.onSuccess.accept(t);
       }
-    } else {
-      log.debug("FutureDone is called but future is not Done isCancelled=[" + future.isCancelled() + "]");
-      error(null);
+    } catch (InterruptedException | ExecutionException e) {
+      logDebug(() -> "Retrieving value raise an error.", e);
+      this.onError.accept(e);
     }
   }
 
-/*
-  @Override
-  public void handle(AsyncResult<T> future) {
-    if (future.succeeded()) {
-      log.debug("SUCCESS - Handle async result [" + future + "]");
-      done(future.result());
-    } else {
-      log.debug("ERROR - Handle async result [" + future + "]");
-      error(future.cause());
+  private void logDebug(Supplier<String> supplier) {
+    if (log.isDebugEnabled()) {
+      log.debug(supplier.get());
     }
   }
-*/
+
+  private void logDebug(Supplier<String> supplier, Throwable e) {
+    if (log.isDebugEnabled()) {
+      log.debug(supplier.get(), e);
+    }
+  }
+
 }

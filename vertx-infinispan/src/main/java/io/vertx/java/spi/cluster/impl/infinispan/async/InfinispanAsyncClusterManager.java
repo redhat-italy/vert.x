@@ -16,24 +16,22 @@
 
 package io.vertx.java.spi.cluster.impl.infinispan.async;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
 import io.vertx.core.shareddata.AsyncMap;
-import io.vertx.core.shareddata.MapOptions;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.java.spi.cluster.impl.infinispan.InfinispanClusterManagerBase;
-import org.infinispan.Cache;
 import io.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
+import org.infinispan.Cache;
 
 public class InfinispanAsyncClusterManager extends InfinispanClusterManagerBase {
 
-    @Override
-    public <K, V> void getAsyncMultiMap(String name, MapOptions options, Handler<AsyncResult<AsyncMultiMap<K, V>>> handler) {
-      getVertx().executeBlocking(() -> new InfinispanAsyncMultiMap<>(this.<K, ImmutableChoosableSet<V>>getAsyncCache(name)), handler);
-    }
+  @Override
+  protected final <K, V> AsyncMultiMap<K, V> getAsyncMultiMap(Cache<K, ImmutableChoosableSet<V>> map) {
+    return new InfinispanAsyncMultiMap<>(this.getNodeID(), map);
+  }
 
-    @Override
-    public <K, V> void getAsyncMap(String name, MapOptions options, Handler<AsyncResult<AsyncMap<K, V>>> handler) {
-      getVertx().executeBlocking(() -> new InfinispanAsyncMap<>(this.<K, V>getAsyncCache(name)), handler);
-    }
+  @Override
+  protected final <K, V> AsyncMap<K, V> getAsyncMap(Cache<K, V> map) {
+    return new InfinispanAsyncMap<>(this.getNodeID(), map);
+  }
+
 }
