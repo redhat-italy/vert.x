@@ -32,29 +32,29 @@ import java.util.stream.Collectors;
 @Listener(primaryOnly = true, sync = true)
 public class CacheManagerListener {
 
-    private final static Logger LOG = LoggerFactory.getLogger(CacheManagerListener.class);
+  private final static Logger LOG = LoggerFactory.getLogger(CacheManagerListener.class);
 
-    private NodeListener nodeListener;
+  private NodeListener nodeListener;
 
-    public CacheManagerListener(NodeListener nodeListener) {
-        this.nodeListener = nodeListener;
-    }
+  public CacheManagerListener(NodeListener nodeListener) {
+    this.nodeListener = nodeListener;
+  }
 
-    @ViewChanged
-    public void viewChangedEvent(ViewChangedEvent event) {
-        List<Address> oldMembers = event.getOldMembers();
-        List<Address> newMembers = event.getNewMembers();
+  @ViewChanged
+  public void viewChangedEvent(ViewChangedEvent event) {
+    List<Address> oldMembers = event.getOldMembers();
+    List<Address> newMembers = event.getNewMembers();
 
-        newMembers.stream()
-                .filter((member) -> !oldMembers.contains(member))
-                .map(Address::toString)
-                .peek((member) -> LOG.info(String.format("EVENT: ADDED MEMBER [%s]", member)))
-                .forEach(nodeListener::nodeAdded);
+    newMembers.stream()
+        .filter((member) -> !oldMembers.contains(member))
+        .map(Address::toString)
+        .peek((member) -> LOG.info(String.format("EVENT: ADDED MEMBER [%s]", member)))
+        .forEach(nodeListener::nodeAdded);
 
-        oldMembers.stream()
-                .filter((member) -> !newMembers.contains(member))
-                .map(Address::toString)
-                .peek((member) -> LOG.info(String.format("EVENT: REMOVED MEMBER [%s]", member)))
-                .forEach(nodeListener::nodeLeft);
-    }
+    oldMembers.stream()
+        .filter((member) -> !newMembers.contains(member))
+        .map(Address::toString)
+        .peek((member) -> LOG.info(String.format("EVENT: REMOVED MEMBER [%s]", member)))
+        .forEach(nodeListener::nodeLeft);
+  }
 }
