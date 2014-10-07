@@ -22,19 +22,16 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.spi.cluster.VertxSPI;
-import io.vertx.java.spi.cluster.impl.logging.PrefixLogDelegate;
 import org.infinispan.Cache;
 
 public class InfinispanAsyncMap<K, V> implements AsyncMap<K, V> {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(InfinispanAsyncMap.class);
-  private final Logger log;
+  private static final Logger log = LoggerFactory.getLogger(InfinispanAsyncMap.class);
 
   private VertxSPI vertx;
   private Cache<K, V> map;
 
-  public InfinispanAsyncMap(String node, VertxSPI vertx, Cache<K, V> map) {
-    this.log = new Logger(new PrefixLogDelegate(LOGGER, String.format("Node[%s] - ", node)));
+  public InfinispanAsyncMap(VertxSPI vertx, Cache<K, V> map) {
     this.vertx = vertx;
     this.map = map;
   }
@@ -63,10 +60,7 @@ public class InfinispanAsyncMap<K, V> implements AsyncMap<K, V> {
     if (log.isDebugEnabled()) {
       log.debug(String.format("PutIfAbsent value [%s] for key [%s]", v, k));
     }
-    vertx.executeBlocking(() -> {
-      map.putIfAbsent(k, v);
-      return v;
-    }, completionHandler);
+    vertx.executeBlocking(() -> map.putIfAbsent(k, v), completionHandler);
   }
 
   @Override

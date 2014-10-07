@@ -25,20 +25,16 @@ import io.vertx.core.spi.cluster.ChoosableIterable;
 import io.vertx.core.spi.cluster.VertxSPI;
 import io.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSet;
 import io.vertx.java.spi.cluster.impl.infinispan.domain.ImmutableChoosableSetImpl;
-import io.vertx.java.spi.cluster.impl.logging.PrefixLogDelegate;
 import org.infinispan.Cache;
 
 public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(InfinispanAsyncMultiMap.class);
-
-  private final Logger log;
+  private static final Logger log = LoggerFactory.getLogger(InfinispanAsyncMultiMap.class);
 
   private final VertxSPI vertx;
   private final Cache<K, ImmutableChoosableSet<V>> cache;
 
-  public InfinispanAsyncMultiMap(String node, VertxSPI vertx, Cache<K, ImmutableChoosableSet<V>> cache) {
-    this.log = new Logger(new PrefixLogDelegate(LOGGER, String.format("Node[%s] - ", node)));
+  public InfinispanAsyncMultiMap(VertxSPI vertx, Cache<K, ImmutableChoosableSet<V>> cache) {
     this.vertx = vertx;
     this.cache = cache;
   }

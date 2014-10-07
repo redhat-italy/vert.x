@@ -17,6 +17,7 @@
 package io.vertx.java.spi.cluster.impl.infinispan;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.VertxException;
 import io.vertx.core.logging.Logger;
@@ -51,26 +52,23 @@ import org.jgroups.protocols.COUNTER;
 import org.jgroups.protocols.FRAG2;
 import org.jgroups.stack.Protocol;
 import org.jgroups.stack.ProtocolStack;
-import org.jgroups.util.UUID;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class InfinispanClusterManager implements ClusterManager {
 
-  private final static Logger log = LoggerFactory.getLogger(InfinispanClusterManager.class);
   public static final String VERTX_COUNTER_CHANNEL = "__vertx__counter_channel";
   public static final String VERTX_LOCK_CHANNEL = "__vertx__lock_channel";
+
+  private final static Logger log = LoggerFactory.getLogger(InfinispanClusterManager.class);
 
   private DefaultCacheManager cacheManager;
   private VertxSPI vertxSPI;
   private CounterService counterService;
   private LockService lockService;
 
-  private boolean active = false;
+  private volatile boolean active = false;
 
   private JChannel lockChannel;
   private JChannel counterChannel;
@@ -84,7 +82,7 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public final String getNodeID() {
-    return cacheManager.getAddress().toString();
+    return cacheManagerName;
   }
 
   @Override
@@ -140,14 +138,14 @@ public class InfinispanClusterManager implements ClusterManager {
   @Override
   public final <K, V> void getAsyncMultiMap(String name, MapOptions options, Handler<AsyncResult<AsyncMultiMap<K, V>>> handler) {
     vertxSPI.executeBlocking(
-        () -> new InfinispanAsyncMultiMap<>(this.getNodeID(), vertxSPI, cacheManager.<K, ImmutableChoosableSet<V>>getCache(name, true)),
+        () -> new InfinispanAsyncMultiMap<>(vertxSPI, cacheManager.<K, ImmutableChoosableSet<V>>getCache(name, true)),
         handler);
   }
 
   @Override
   public final <K, V> void getAsyncMap(String name, MapOptions options, Handler<AsyncResult<AsyncMap<K, V>>> handler) {
     vertxSPI.executeBlocking(
-        () -> new InfinispanAsyncMap<>(this.getNodeID(), vertxSPI, cacheManager.<K, V>getCache(name, true)),
+        () -> new InfinispanAsyncMap<>(vertxSPI, cacheManager.<K, V>getCache(name, true)),
         handler);
   }
 
@@ -158,14 +156,14 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public final void leave(Handler<AsyncResult<Void>> handler) {
-    if (log.isDebugEnabled()) {
-      log.debug(String.format("LEAVE Active[%s] [%s]", active, this.toString()));
-    }
     vertxSPI.executeBlocking(() -> {
       if (!active) {
         return null;
       }
       active = false;
+      if (log.isInfoEnabled()) {
+        log.info(String.format("Node id=%s leave the cluster", this.getNodeID()));
+      }
 
       counterChannel.close();
       lockChannel.close();
@@ -178,14 +176,14 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public final void join(Handler<AsyncResult<Void>> handler) {
-    if (log.isDebugEnabled()) {
-      log.debug(String.format("Join to the cluster [%s]", this.toString()));
-    }
     vertxSPI.executeBlocking(() -> {
       if (active) {
         return null;
       }
       active = true;
+      if (log.isInfoEnabled()) {
+        log.info(String.format("Node id=%s join the cluster", this.getNodeID()));
+      }
 
       GlobalConfiguration globalConfiguration = new GlobalConfigurationBuilder()
           .clusteredDefault()
