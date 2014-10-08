@@ -16,29 +16,8 @@
 
 package io.vertx.core.net;
 
-import io.vertx.core.buffer.Buffer;
-
-import java.util.List;
-
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
-public interface ClientOptions<T extends ClientOptions> extends TCPOptions<T> {
-
-  boolean isTrustAll();
-
-  T setTrustAll(boolean trustAll);
-
-  List<String> getCrlPaths();
-
-  T addCrlPath(String crlPath);
-
-  List<Buffer> getCrlValues();
-
-  T addCrlValue(Buffer crlValue);
-
-  int getConnectTimeout();
-
-  T setConnectTimeout(int connectTimeout);
-
+public class ServerOptionsBase extends TCPSSLOptions {
 }
