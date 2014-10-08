@@ -35,6 +35,7 @@ import io.vertx.java.spi.cluster.impl.infinispan.domain.InfinispanLockImpl;
 import io.vertx.java.spi.cluster.impl.infinispan.domain.serializer.ImmutableChoosableSetSerializer;
 import io.vertx.java.spi.cluster.impl.infinispan.listeners.CacheManagerListener;
 import io.vertx.java.spi.cluster.impl.jgroups.protocols.VERTX_LOCK;
+import org.infinispan.Cache;
 import org.infinispan.configuration.cache.CacheMode;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
@@ -167,6 +168,11 @@ public class InfinispanClusterManager implements ClusterManager {
 
       counterChannel.close();
       lockChannel.close();
+
+      for(String names: cacheManager.getCacheNames()) {
+        Cache cache = cacheManager.getCache(names);
+        cache.stop();
+      }
 
       cacheManager.stop();
       cacheManager = null;
