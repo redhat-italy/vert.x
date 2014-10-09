@@ -24,19 +24,18 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.spi.cluster.NodeListener;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Listener(primaryOnly = true, sync = true)
 public class CacheManagerListener {
 
-  private final static Logger LOG = LoggerFactory.getLogger(CacheManagerListener.class);
+  private final static Logger log = LoggerFactory.getLogger(CacheManagerListener.class);
 
+  private Address address;
   private NodeListener nodeListener;
 
-  public CacheManagerListener(NodeListener nodeListener) {
+  public CacheManagerListener(Address address, NodeListener nodeListener) {
+    this.address = address;
     this.nodeListener = nodeListener;
   }
 
@@ -46,15 +45,23 @@ public class CacheManagerListener {
     List<Address> newMembers = event.getNewMembers();
 
     newMembers.stream()
-        .filter((member) -> !oldMembers.contains(member))
+        .filter((member) -> !oldMembers.contains(member) && !address.equals(member))
         .map(Address::toString)
-        .peek((member) -> LOG.info(String.format("EVENT: ADDED MEMBER [%s]", member)))
-        .forEach(nodeListener::nodeAdded);
+        .forEach((member) -> {
+          if (log.isInfoEnabled()) {
+            log.info(String.format("Notify join a new cluster member [%s]", member));
+          }
+          nodeListener.nodeAdded(member);
+        });
 
     oldMembers.stream()
-        .filter((member) -> !newMembers.contains(member))
+        .filter((member) -> !newMembers.contains(member) && !address.equals(member))
         .map(Address::toString)
-        .peek((member) -> LOG.info(String.format("EVENT: REMOVED MEMBER [%s]", member)))
-        .forEach(nodeListener::nodeLeft);
+        .forEach((member) -> {
+          if (log.isInfoEnabled()) {
+            log.info(String.format("Notify removing a cluster member [%s]", member));
+          }
+          nodeListener.nodeLeft(member);
+        });
   }
 }

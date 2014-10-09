@@ -55,7 +55,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <infinispan.version>6.0.2.Final</infinispan.version>
+    <infinispan.version>7.0.0.Beta2</infinispan.version>
     <netty.version>4.0.23.Final</netty.version>
     <jackson.version>2.4.0</jackson.version>
     <hazelcast.version>3.2.5</hazelcast.version>

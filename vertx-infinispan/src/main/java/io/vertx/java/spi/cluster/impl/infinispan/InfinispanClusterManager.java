@@ -17,7 +17,6 @@
 package io.vertx.java.spi.cluster.impl.infinispan;
 
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.VertxException;
 import io.vertx.core.logging.Logger;
@@ -35,7 +34,6 @@ import io.vertx.java.spi.cluster.impl.infinispan.domain.InfinispanLockImpl;
 import io.vertx.java.spi.cluster.impl.infinispan.domain.serializer.ImmutableChoosableSetSerializer;
 import io.vertx.java.spi.cluster.impl.infinispan.listeners.CacheManagerListener;
 import io.vertx.java.spi.cluster.impl.jgroups.protocols.VERTX_LOCK;
-import org.infinispan.Cache;
 import org.infinispan.configuration.cache.CacheMode;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
@@ -76,6 +74,8 @@ public class InfinispanClusterManager implements ClusterManager {
 
   private final String cacheManagerName = UUID.randomUUID().toString();
 
+  private Address address;
+
   @Override
   public final void setVertx(VertxSPI vertxSPI) {
     this.vertxSPI = vertxSPI;
@@ -83,7 +83,7 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public final String getNodeID() {
-    return cacheManagerName;
+    return address.toString();
   }
 
   @Override
@@ -101,7 +101,7 @@ public class InfinispanClusterManager implements ClusterManager {
     if (log.isDebugEnabled()) {
       log.debug(String.format("Add node listener [%s]", listener.toString()));
     }
-    this.cacheManager.addListener(new CacheManagerListener(listener));
+    this.cacheManager.addListener(new CacheManagerListener(address, listener));
   }
 
   @Override
@@ -169,13 +169,9 @@ public class InfinispanClusterManager implements ClusterManager {
       counterChannel.close();
       lockChannel.close();
 
-      for(String names: cacheManager.getCacheNames()) {
-        Cache cache = cacheManager.getCache(names);
-        cache.stop();
-      }
-
       cacheManager.stop();
       cacheManager = null;
+      address = null;
       return null;
     }, handler);
   }
@@ -187,9 +183,6 @@ public class InfinispanClusterManager implements ClusterManager {
         return null;
       }
       active = true;
-      if (log.isInfoEnabled()) {
-        log.info(String.format("Node id=%s join the cluster", this.getNodeID()));
-      }
 
       GlobalConfiguration globalConfiguration = new GlobalConfigurationBuilder()
           .clusteredDefault()
@@ -199,8 +192,7 @@ public class InfinispanClusterManager implements ClusterManager {
           .build();
 
       Configuration syncConfiguration = new ConfigurationBuilder()
-          .clustering().cacheMode(CacheMode.DIST_SYNC)
-          .hash().numOwners(2)
+          .clustering().cacheMode(CacheMode.REPL_SYNC)
           .build();
 
       cacheManager = new DefaultCacheManager(globalConfiguration, syncConfiguration);
@@ -208,11 +200,17 @@ public class InfinispanClusterManager implements ClusterManager {
 
       JGroupsTransport transport = (JGroupsTransport) cacheManager.getCache().getAdvancedCache().getRpcManager().getTransport();
 
+      address = transport.getAddress();
+
       lockChannel = forkChannel(transport.getChannel(), VERTX_LOCK_CHANNEL, this.getNodeID(), new VERTX_LOCK());
       lockService = new LockService(lockChannel);
 
       counterChannel = forkChannel(transport.getChannel(), VERTX_COUNTER_CHANNEL, this.getNodeID(), new COUNTER());
       counterService = new CounterService(counterChannel);
+
+      if (log.isInfoEnabled()) {
+        log.info(String.format("Node id=%s join the cluster", this.getNodeID()));
+      }
 
       return null;
     }, handler);
