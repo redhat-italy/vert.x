@@ -86,7 +86,7 @@
   <!-- the TOA is only needed for total order transactions-->
 
   <pbcast.STATE />
-  
+
   <UFC max_credits="2m" min_threshold="0.40"/>
   <MFC max_credits="2m" min_threshold="0.40"/>
   <FRAG2 frag_size="30k"/>
