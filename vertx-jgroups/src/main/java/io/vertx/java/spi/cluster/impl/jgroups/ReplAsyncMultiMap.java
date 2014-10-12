@@ -44,6 +44,8 @@ public class ReplAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
         } catch (Exception e) {
           handler.handle(Future.completedFuture(e));
         }
+      } else {
+        handler.handle(Future.completedFuture(lock.cause()));
       }
     });
   }
@@ -55,7 +57,7 @@ public class ReplAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
   @Override
   public void remove(K k, V v, Handler<AsyncResult<Boolean>> handler) {
-    vertx.sharedData().getLock(name, (lock) -> {
+    vertx.sharedData().getLock(name + k, (lock) -> {
       if (lock.succeeded()) {
         try {
           ImmutableChoosableSet<V> entry = fromByteArray(map.get(k));
@@ -69,6 +71,8 @@ public class ReplAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
         } catch (Exception e) {
           handler.handle(Future.completedFuture(e));
         }
+      } else {
+        handler.handle(Future.completedFuture(lock.cause()));
       }
     });
   }
