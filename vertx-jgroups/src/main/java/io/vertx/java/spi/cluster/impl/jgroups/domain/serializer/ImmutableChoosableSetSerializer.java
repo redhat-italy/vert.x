@@ -52,6 +52,9 @@ public class ImmutableChoosableSetSerializer {
   }
 
   public static <V> ImmutableChoosableSet<V> fromByteArray(byte[] object) {
+    if(object == null) {
+      return null;
+    }
     try (
         ByteArrayInputStream buffer = new ByteArrayInputStream(object);
         ObjectInputStream stream = new ObjectInputStream(buffer)) {
