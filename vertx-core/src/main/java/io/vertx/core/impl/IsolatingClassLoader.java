@@ -27,7 +27,7 @@ import java.net.URLClassLoader;
  *
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
-class IsolatingClassLoader extends URLClassLoader {
+public class IsolatingClassLoader extends URLClassLoader {
 
   IsolatingClassLoader(URL[] urls, ClassLoader parent) {
     super(urls, parent);
@@ -65,11 +65,12 @@ class IsolatingClassLoader extends URLClassLoader {
 
   private boolean isVertxOrSystemClass(String name) {
     return
-      name.startsWith("java.") ||
+        name.startsWith("java.") ||
         name.startsWith("javax.") ||
         name.startsWith("com.sun.") ||
         name.startsWith("io.vertx.core") ||
         name.startsWith("com.hazelcast") ||
-        name.startsWith("io.netty.");
+        name.startsWith("io.netty.") ||
+        name.startsWith("com.fasterxml.jackson");
   }
 }

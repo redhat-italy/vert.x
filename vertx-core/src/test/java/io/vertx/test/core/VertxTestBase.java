@@ -31,6 +31,7 @@ import io.vertx.core.net.PKCS12Options;
 import io.vertx.core.net.TrustStoreOptions;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.test.fakecluster.FakeClusterManager;
+import org.junit.Rule;
 
 import java.net.URL;
 import java.nio.file.Path;
@@ -46,6 +47,9 @@ public class VertxTestBase extends AsyncTestBase {
 
   private static final Logger log = LoggerFactory.getLogger(VertxTestBase.class);
 
+  @Rule
+  public RepeatRule repeatRule = new RepeatRule();
+
   protected Vertx vertx;
 
   protected Vertx[] vertices;
@@ -58,7 +62,7 @@ public class VertxTestBase extends AsyncTestBase {
   public void setUp() throws Exception {
     super.setUp();
     vinit();
-    vertx = Vertx.vertx();
+    vertx = Vertx.vertx(getOptions());
   }
 
   protected VertxOptions getOptions() {
@@ -134,6 +138,7 @@ public class VertxTestBase extends AsyncTestBase {
   protected <T> Handler<AsyncResult<T>> onSuccess(Consumer<T> consumer) {
     return result -> {
       if (result.failed()) {
+        result.cause().printStackTrace();
         fail(result.cause().getMessage());
       } else {
         consumer.accept(result.result());

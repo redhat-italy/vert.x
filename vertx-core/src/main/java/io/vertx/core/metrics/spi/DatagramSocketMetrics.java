@@ -14,29 +14,28 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.core.impl;
+package io.vertx.core.metrics.spi;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Handler;
-import io.vertx.core.Verticle;
+import io.vertx.core.net.SocketAddress;
 
 /**
- * @author <a href="http://tfox.org">Tim Fox</a>
+ * @author <a href="mailto:nscavell@redhat.com">Nick Scavelli</a>
  */
-public interface Deployment {
+public interface DatagramSocketMetrics extends NetMetrics {
 
-  void addChild(Deployment deployment);
+  // There should probably be a TcpMetrics that has the connected/disconnected characteristics, but since datagram
+  // uses a tcp like connection class, it's easier to do it this way
 
-  void undeploy(Handler<AsyncResult<Void>> completionHandler);
+  @Override
+  default void connected(SocketAddress remoteAddress) {
+    newSocket();
+  }
 
-  void doUndeploy(ContextImpl undeployingContext, Handler<AsyncResult<Void>> completionHandler);
+  @Override
+  default void disconnected(SocketAddress remoteAddress) {
+    close();
+  }
 
-  String identifier();
-
-  DeploymentOptions deploymentOptions();
-
-  Verticle getVerticle();
-
-  boolean isChild();
+  // What does this represent?
+  void newSocket();
 }

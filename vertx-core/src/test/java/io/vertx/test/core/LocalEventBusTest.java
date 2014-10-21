@@ -41,6 +41,7 @@ import io.vertx.core.impl.WorkerContext;
 import io.vertx.core.streams.Pump;
 import io.vertx.core.streams.ReadStream;
 import io.vertx.core.streams.WriteStream;
+
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -972,14 +973,22 @@ public class LocalEventBusTest extends EventBusTestBase {
   }
 
   @Test
-  public void testExceptionWhenDeliveringBufferedMessage() {
+  public void testExceptionWhenDeliveringBufferedMessageWithMessageStream() {
+    testExceptionWhenDeliveringBufferedMessage((consumer, handler) -> consumer.handler(message -> handler.handle(message.body())));
+  }
+
+  @Test
+  public void testExceptionWhenDeliveringBufferedMessageWithBodyStream() {
+    testExceptionWhenDeliveringBufferedMessage((consumer, handler) -> consumer.bodyStream().handler(handler));
+  }
+
+  private void testExceptionWhenDeliveringBufferedMessage(BiFunction<MessageConsumer<String>, Handler<String>, ReadStream<?>> register) {
     String[] data = new String[11];
     for (int i = 0;i < data.length;i++) {
       data[i] = TestUtils.randomAlphaString(10);
     }
     Set<String> expected = new HashSet<>();
-    Handler<Message<String>> handler = message -> {
-      String body = message.body();
+    Handler<String> handler = body -> {
       if ("end".equals(body)) {
         assertEquals(Collections.emptySet(), expected);
         testComplete();
@@ -989,17 +998,134 @@ public class LocalEventBusTest extends EventBusTestBase {
       }
     };
     MessageConsumer<String> reg = eb.<String>consumer(ADDRESS1).setMaxBufferedMessages(10);
+    ReadStream<?> controller = register.apply(reg, handler);
     ((EventBusImpl.HandlerRegistration<String>) reg).discardHandler(msg -> {
       assertEquals(data[10], msg.body());
       expected.addAll(Arrays.asList(data).subList(0, 10));
-      reg.resume();
+      controller.resume();
       eb.send(ADDRESS1, "end");
     });
-    reg.handler(handler);
-    reg.pause();
+    controller.pause();
     for (String msg : data) {
       eb.publish(ADDRESS1, msg);
     }
+    await();
+  }
+
+  @Test
+  public void testUnregisterationOfRegisteredConsumerCallsEndHandlerWithMessaqgeStream() {
+    MessageConsumer<String> consumer = eb.consumer(ADDRESS1);
+    testUnregisterationOfRegisteredConsumerCallsEndHandler(consumer, consumer);
+  }
+
+  @Test
+  public void testUnregisterationOfRegisteredConsumerCallsEndHandlerWithBodyStream() {
+    MessageConsumer<String> consumer = eb.consumer(ADDRESS1);
+    testUnregisterationOfRegisteredConsumerCallsEndHandler(consumer, consumer.bodyStream());
+  }
+
+  private void testUnregisterationOfRegisteredConsumerCallsEndHandler(MessageConsumer<String> consumer, ReadStream<?> readStream) {
+    consumer.handler(msg -> {});
+    consumer.endHandler(v -> testComplete());
+    consumer.unregister();
+    await();
+  }
+
+  @Test
+  public void testUnregistrationOfUnregisteredConsumerCallsEndHandlerWithMessageStream() {
+    MessageConsumer<String> consumer = eb.consumer(ADDRESS1);
+    testUnregistrationOfUnregisteredConsumerCallsEndHandler(consumer, consumer);
+  }
+
+  @Test
+  public void testUnregistrationOfUnregisteredConsumerCallsEndHandlerWithBodyStream() {
+    MessageConsumer<String> consumer = eb.consumer(ADDRESS1);
+    testUnregistrationOfUnregisteredConsumerCallsEndHandler(consumer, consumer.bodyStream());
+  }
+
+  private void testUnregistrationOfUnregisteredConsumerCallsEndHandler(MessageConsumer<String> consumer, ReadStream<?> readStream) {
+    consumer.endHandler(v -> testComplete());
+    consumer.unregister();
+    await();
+  }
+
+  @Test
+  public void testCompletingUnregistrationOfRegisteredConsumerCallsEndHandlerWithMessageStream() {
+    MessageConsumer<String> consumer = eb.consumer(ADDRESS1);
+    testCompletingUnregistrationOfRegisteredConsumerCallsEndHandler(consumer, consumer);
+  }
+
+  @Test
+  public void testCompletingUnregistrationOfRegisteredConsumerCallsEndHandlerWithBodyStream() {
+    MessageConsumer<String> consumer = eb.consumer(ADDRESS1);
+    testCompletingUnregistrationOfRegisteredConsumerCallsEndHandler(consumer, consumer.bodyStream());
+  }
+
+  private void testCompletingUnregistrationOfRegisteredConsumerCallsEndHandler(MessageConsumer<String> consumer, ReadStream<?> readStream) {
+    AtomicInteger count = new AtomicInteger(0);
+    consumer.handler(msg -> {});
+    consumer.endHandler(v -> {
+      if (count.incrementAndGet() == 2) {
+        testComplete();
+      }
+    });
+    consumer.unregister(ar -> {
+      assertTrue(ar.succeeded());
+      if (count.incrementAndGet() == 2) {
+        testComplete();
+      }
+    });
+    await();
+  }
+
+  @Test
+  public void testCompletingUnregistrationUnregisteredConsumerCallsEndHandlerWithMessageStream() {
+    MessageConsumer<String> consumer = eb.consumer(ADDRESS1);
+    testCompletingUnregistrationUnregisteredConsumerCallsEndHandler(consumer, consumer);
+  }
+
+  @Test
+  public void testCompletingUnregistrationUnregisteredConsumerCallsEndHandlerWithBodyStream() {
+    MessageConsumer<String> consumer = eb.consumer(ADDRESS1);
+    testCompletingUnregistrationUnregisteredConsumerCallsEndHandler(consumer, consumer.bodyStream());
+  }
+
+  private void testCompletingUnregistrationUnregisteredConsumerCallsEndHandler(MessageConsumer<String> consumer, ReadStream<?> readStream) {
+    AtomicInteger count = new AtomicInteger(0);
+    readStream.endHandler(v -> {
+      if (count.incrementAndGet() == 2) {
+        testComplete();
+      }
+    });
+    consumer.unregister(ar -> {
+      assertTrue(ar.succeeded());
+      if (count.incrementAndGet() == 2) {
+        testComplete();
+      }
+    });
+    await();
+  }
+
+  @Test
+  public void testUnregistrationWhenSettingNullHandlerWithConsumer() {
+    MessageConsumer<String> consumer = eb.consumer(ADDRESS1);
+    testUnregistrationWhenSettingNullHandler(consumer, consumer);
+  }
+
+  @Test
+  public void testUnregistrationWhenSettingNullHandlerWithBodyStream() {
+    MessageConsumer<String> consumer = eb.consumer(ADDRESS1);
+    testUnregistrationWhenSettingNullHandler(consumer, consumer.bodyStream());
+  }
+
+  private void testUnregistrationWhenSettingNullHandler(MessageConsumer<String> consumer, ReadStream<?> readStream) {
+    readStream.handler(msg -> {});
+    readStream.endHandler(v -> {
+      assertFalse(consumer.isRegistered());
+      testComplete();
+    });
+    assertTrue(consumer.isRegistered());
+    readStream.handler(null);
     await();
   }
 
@@ -1076,5 +1202,191 @@ public class LocalEventBusTest extends EventBusTestBase {
     Pump.pump(consumer, producer);
     producer.write(str);
   }
-}
 
+  @Override
+  protected <T> void testForward(T val) {
+
+    eb.<T>consumer(ADDRESS1).handler((Message<T> msg) -> {
+        assertEquals(val, msg.body());
+        msg.forward(ADDRESS2);
+
+    });
+
+    eb.<T>consumer(ADDRESS2).handler((Message<T> msg) -> {
+      
+        assertEquals(val, msg.body());
+        testComplete();     
+    });
+
+    eb.send(ADDRESS1, val);
+    await();
+  }
+
+  @Override
+  protected <T> void testForwardWithHeaders(T val, DeliveryOptions options) {
+
+    eb.<T>consumer(ADDRESS1).handler((Message<T> msg) -> {
+        assertEquals(val, msg.body());
+        msg.forward(ADDRESS2);
+    });
+
+    eb.<T>consumer(ADDRESS2).handler((Message<T> msg) -> {
+
+        assertEquals(val, msg.body());
+        testComplete();
+    });
+
+    eb.send(ADDRESS1, val, options);
+    await();
+    
+  }
+
+  @Test
+  public <T> void testForwardNoReadBodyOrHeaders(){
+    
+    final String body = "Test Body";
+    final String FIRST_KEY = "first";
+    final String SEC_KEY = "second";
+
+    eb.<T> consumer(ADDRESS1).handler((Message<T> msg) -> {
+
+      if (!msg.isForward()) {
+        msg.forward(ADDRESS2);
+      } else {
+        assertTrue(msg.isForward());
+        assertEquals(msg.headers().get(FIRST_KEY), "first");
+        assertEquals(msg.headers().get(SEC_KEY), "second");
+        testComplete();
+      }
+
+    });
+
+    eb.<T> consumer(ADDRESS2).handler((Message<T> msg) -> {
+      assertTrue(msg.isForward());
+      assertEquals(body, msg.body());
+      msg.forward(ADDRESS1);
+    });
+
+    DeliveryOptions options = new DeliveryOptions();
+    options.addHeader("first", "first");
+    options.addHeader("second", "second");    
+    eb.send(ADDRESS1, body, options);
+    await();
+
+  }
+
+  @Test
+  public <T> void testForwardReadBodyNoHeader(){
+    
+    final String body = "Test Body";
+    final String FIRST_KEY = "first";
+    final String SEC_KEY = "second";
+
+    eb.<T> consumer(ADDRESS1).handler((Message<T> msg) -> {
+
+      if (!msg.isForward()) {
+        assertEquals(body, msg.body());
+        msg.forward(ADDRESS2);
+      } else {
+        assertTrue(msg.isForward());
+        assertEquals(msg.headers().get(FIRST_KEY), "first");
+        assertEquals(msg.headers().get(SEC_KEY), "second");
+        testComplete();
+      }
+
+    });
+
+    eb.<T> consumer(ADDRESS2).handler((Message<T> msg) -> {
+      assertTrue(msg.isForward());
+      assertEquals(body, msg.body());
+      msg.forward(ADDRESS1);
+    });
+
+    DeliveryOptions options = new DeliveryOptions();
+    options.addHeader("first", "first");
+    options.addHeader("second", "second");    
+    eb.send(ADDRESS1, body, options);
+    await();
+
+  }
+
+  @Test
+  public <T> void testForwardReadHeadersNoBody(){
+        
+    final String body = "Test Body";
+    final String FIRST_KEY = "first";
+    final String SEC_KEY = "second";
+
+    eb.<T> consumer(ADDRESS1).handler((Message<T> msg) -> {
+
+      if (!msg.isForward()) {
+        assertEquals(msg.headers().get(FIRST_KEY), "first");
+        assertEquals(msg.headers().get(SEC_KEY), "second");
+        msg.forward(ADDRESS2);
+
+      } else {
+        assertTrue(msg.isForward());
+        assertEquals(msg.headers().get(FIRST_KEY), "first");
+        assertEquals(msg.headers().get(SEC_KEY), "second");
+        testComplete();
+      }
+
+    });
+
+    eb.<T> consumer(ADDRESS2).handler((Message<T> msg) -> {
+      assertTrue(msg.isForward());
+      assertEquals(body, msg.body());
+      assertEquals(msg.headers().get(FIRST_KEY), "first");
+      assertEquals(msg.headers().get(SEC_KEY), "second");
+      msg.forward(ADDRESS1);
+    });
+
+    DeliveryOptions options = new DeliveryOptions();
+    options.addHeader("first", "first");
+    options.addHeader("second", "second");    
+    eb.send(ADDRESS1, body, options);
+    await();
+
+  }
+
+  @Test
+  public <T> void testForwardModifyHeaders(){
+        
+    final String body = "Test Body";
+    final String FIRST_KEY = "first";
+    final String SEC_KEY = "second";
+
+    eb.<T> consumer(ADDRESS1).handler((Message<T> msg) -> {
+
+      if (!msg.isForward()) {
+        msg.headers().remove("first");
+        msg.headers().remove("second");
+        msg.headers().add("third", "third");
+        msg.headers().add("fourth", "fourth");
+        msg.forward(ADDRESS2);
+
+      } else {
+        testComplete();
+      }
+
+    });
+
+    eb.<T> consumer(ADDRESS2).handler((Message<T> msg) -> {
+      assertTrue(msg.isForward());
+      assertEquals(body, msg.body());
+      assertNull(msg.headers().get(FIRST_KEY));
+      assertNull(msg.headers().get(SEC_KEY));      
+      assertEquals(msg.headers().get("third"), "third");
+      assertEquals(msg.headers().get("fourth"), "fourth");
+
+      msg.forward(ADDRESS1);
+    });
+
+    DeliveryOptions options = new DeliveryOptions();
+    options.addHeader("first", "first");
+    options.addHeader("second", "second");    
+    eb.send(ADDRESS1, body, options);
+    await();
+
+  }
+}

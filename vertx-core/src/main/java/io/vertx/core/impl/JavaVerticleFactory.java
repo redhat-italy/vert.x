@@ -14,20 +14,16 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.core.impl.verticle;
+package io.vertx.core.impl;
 
 import io.vertx.core.Verticle;
-import io.vertx.core.Vertx;
+import io.vertx.core.impl.verticle.CompilingClassLoader;
 import io.vertx.core.spi.VerticleFactory;
 
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
-public class SimpleJavaVerticleFactory implements VerticleFactory {
-
-  @Override
-  public void init(Vertx vertx) {
-  }
+public class JavaVerticleFactory implements VerticleFactory {
 
   @Override
   public String prefix() {
@@ -36,6 +32,7 @@ public class SimpleJavaVerticleFactory implements VerticleFactory {
 
   @Override
   public Verticle createVerticle(String verticleName, ClassLoader classLoader) throws Exception {
+    verticleName = VerticleFactory.removePrefix(verticleName);
     Class clazz;
     if (verticleName.endsWith(".java")) {
       CompilingClassLoader compilingLoader = new CompilingClassLoader(classLoader, verticleName);
@@ -47,7 +44,4 @@ public class SimpleJavaVerticleFactory implements VerticleFactory {
     return (Verticle) clazz.newInstance();
   }
 
-  @Override
-  public void close() {
-  }
 }

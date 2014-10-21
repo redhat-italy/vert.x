@@ -14,29 +14,17 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.core.impl;
+package io.vertx.core.metrics.spi;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Handler;
-import io.vertx.core.Verticle;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpClientResponse;
 
 /**
- * @author <a href="http://tfox.org">Tim Fox</a>
+ * @author <a href="mailto:nscavell@redhat.com">Nick Scavelli</a>
  */
-public interface Deployment {
+public interface HttpClientMetrics extends NetMetrics {
 
-  void addChild(Deployment deployment);
+  void requestBegin(HttpClientRequest request);
 
-  void undeploy(Handler<AsyncResult<Void>> completionHandler);
-
-  void doUndeploy(ContextImpl undeployingContext, Handler<AsyncResult<Void>> completionHandler);
-
-  String identifier();
-
-  DeploymentOptions deploymentOptions();
-
-  Verticle getVerticle();
-
-  boolean isChild();
+  void responseEnd(HttpClientRequest request, HttpClientResponse response);
 }

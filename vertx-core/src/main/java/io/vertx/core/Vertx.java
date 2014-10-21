@@ -28,6 +28,7 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.metrics.Measured;
 import io.vertx.core.net.NetClient;
 import io.vertx.core.net.NetClientOptions;
 import io.vertx.core.net.NetServer;
@@ -35,6 +36,7 @@ import io.vertx.core.net.NetServerOptions;
 import io.vertx.core.shareddata.SharedData;
 import io.vertx.core.spi.VerticleFactory;
 import io.vertx.core.spi.VertxFactory;
+import io.vertx.core.streams.ReadStream;
 
 import java.util.Set;
 
@@ -52,7 +54,7 @@ import java.util.Set;
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
 @VertxGen
-public interface Vertx {
+public interface Vertx extends Measured {
 
   static Vertx vertx() {
     return factory.vertx();
@@ -114,9 +116,20 @@ public interface Vertx {
   /**
    * Set a one-shot timer to fire after {@code delay} milliseconds, at which point {@code handler} will be called with
    * the id of the timer.
+   *
    * @return the unique ID of the timer
    */
   long setTimer(long delay, Handler<Long> handler);
+
+  /**
+   * Returns a one-shot timer as a read stream. The timer will be fired after {@code delay} milliseconds after
+   * the {@link ReadStream#handler} has been called. The {@link ReadStream#endHandler(Handler)} will be called
+   * after the timer handler has been called. Setting a null handler before the timer handler callback will
+   * cancel the timer. Pausing the timer inhibits the timer shot and does not delay it.
+   *
+   * @return the timer stream
+   */
+  ReadStream<Long> timerStream(long delay);
 
   /**
    * Set a periodic timer to fire every {@code delay} milliseconds, at which point {@code handler} will be called with
@@ -124,6 +137,16 @@ public interface Vertx {
    * @return the unique ID of the timer
    */
   long setPeriodic(long delay, Handler<Long> handler);
+
+  /**
+   * Returns a periodic timer as a read stream. The timer will be fired every {@code delay} milliseconds after
+   * the {@link ReadStream#handler} has been called. The {@link ReadStream#endHandler(Handler)} will be called
+   * after the timer handler has been called. Setting a null handler callback cancels the timer. Pausing
+   * the timer inhibits the timer shots until the stream is resumed.
+   *
+   * @return the periodic stream
+   */
+  ReadStream<Long> periodicStream(long delay);
 
   /**
    * Cancel the timer with the specified {@code id}. Returns {@code} true if the timer was successfully cancelled, or
@@ -166,13 +189,15 @@ public interface Vertx {
 
 
 
-  void deployVerticle(String verticleName);
+  void deployVerticle(String identifier);
 
-  void deployVerticle(String verticleName, Handler<AsyncResult<String>> completionHandler);
+  void deployVerticle(String identifier, Handler<AsyncResult<String>> completionHandler);
 
-  void deployVerticle(String verticleName, DeploymentOptions options);
+  void deployVerticle(String identifier, DeploymentOptions options);
 
-  void deployVerticle(String verticleName, DeploymentOptions options, Handler<AsyncResult<String>> completionHandler);
+  void deployVerticle(String identifier, DeploymentOptions options, Handler<AsyncResult<String>> completionHandler);
+
+  void undeployVerticle(String deploymentID);
 
   void undeployVerticle(String deploymentID, Handler<AsyncResult<Void>> completionHandler);
 

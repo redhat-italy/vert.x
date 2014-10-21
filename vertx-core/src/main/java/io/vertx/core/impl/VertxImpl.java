@@ -47,6 +47,8 @@ import io.vertx.core.http.impl.HttpServerImpl;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
+import io.vertx.core.metrics.impl.DummyVertxMetrics;
+import io.vertx.core.metrics.spi.VertxMetrics;
 import io.vertx.core.net.NetClient;
 import io.vertx.core.net.NetClientOptions;
 import io.vertx.core.net.NetServer;
@@ -57,8 +59,10 @@ import io.vertx.core.net.impl.ServerID;
 import io.vertx.core.shareddata.SharedData;
 import io.vertx.core.shareddata.impl.SharedDataImpl;
 import io.vertx.core.spi.VerticleFactory;
+import io.vertx.core.spi.VertxMetricsFactory;
 import io.vertx.core.spi.cluster.Action;
 import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.core.streams.ReadStream;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -71,6 +75,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
@@ -89,6 +94,7 @@ public class VertxImpl implements VertxInternal {
   private final FileSystem fileSystem = getFileSystem();
   private EventBus eventBus;
   private final SharedData sharedData;
+  private final VertxMetrics metrics;
 
   private ExecutorService workerPool;
   private ExecutorService internalBlockingPool;
@@ -103,7 +109,7 @@ public class VertxImpl implements VertxInternal {
   private final ConcurrentMap<Long, InternalTimerHandler> timeouts = new ConcurrentHashMap<>();
   private final AtomicLong timeoutCounter = new AtomicLong(0);
   private final ClusterManager clusterManager;
-  private final DeploymentManager deploymentManager = new DeploymentManager(this);
+  private final DeploymentManager deploymentManager;
   private boolean closed;
   private HAManager haManager;
 
@@ -117,6 +123,8 @@ public class VertxImpl implements VertxInternal {
 
   VertxImpl(VertxOptions options, Handler<AsyncResult<Vertx>> resultHandler) {
     configurePools(options);
+    this.deploymentManager = new DeploymentManager(this);
+    this.metrics = initialiseMetrics(options);
     if (options.isClustered()) {
       this.clusterManager = getClusterManager(options);
       this.clusterManager.setVertx(this);
@@ -195,8 +203,18 @@ public class VertxImpl implements VertxInternal {
     return scheduleTimeout(getOrCreateContext(), handler, delay, true);
   }
 
+  @Override
+  public ReadStream<Long> periodicStream(long delay) {
+    return new TimeoutStream(delay, true);
+  }
+
   public long setTimer(long delay, Handler<Long> handler) {
     return scheduleTimeout(getOrCreateContext(), handler, delay, false);
+  }
+
+  @Override
+  public ReadStream<Long> timerStream(long delay) {
+    return new TimeoutStream(delay, false);
   }
 
   public void runOnContext(Handler<Void> task) {
@@ -221,7 +239,7 @@ public class VertxImpl implements VertxInternal {
     ContextImpl ctx = getContext();
     if (ctx == null) {
       // We are running embedded - Create a context
-      ctx = createEventLoopContext(null, new JsonObject());
+      ctx = createEventLoopContext(null, new JsonObject(), Thread.currentThread().getContextClassLoader());
     }
     return ctx;
   }
@@ -234,6 +252,19 @@ public class VertxImpl implements VertxInternal {
     return sharedNetServers;
   }
 
+  @Override
+  public String metricBaseName() {
+    return metrics.baseName();
+  }
+
+  @Override
+  public Map<String, JsonObject> metrics() {
+    String name = metricBaseName();
+    return metrics.metrics().entrySet().stream()
+      .filter(e -> e.getKey().startsWith(name))
+      .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+  }
+
   public boolean cancelTimer(long id) {
     InternalTimerHandler handler = timeouts.remove(id);
     if (handler != null) {
@@ -244,13 +275,28 @@ public class VertxImpl implements VertxInternal {
     }
   }
 
-  public EventLoopContext createEventLoopContext(String deploymentID, JsonObject config) {
-    return new EventLoopContext(this, workerOrderedFact.getExecutor(), deploymentID, config);
+  public EventLoopContext createEventLoopContext(String deploymentID, JsonObject config, ClassLoader tccl) {
+    return new EventLoopContext(this, workerOrderedFact.getExecutor(), deploymentID, config, tccl);
   }
 
   @Override
   public DnsClient createDnsClient(int port, String host) {
     return new DnsClientImpl(this, port, host);
+  }
+
+  private VertxMetrics initialiseMetrics(VertxOptions options) {
+    if (options.isMetricsEnabled()) {
+      ServiceLoader<VertxMetricsFactory> factories = ServiceLoader.load(VertxMetricsFactory.class);
+      if (factories.iterator().hasNext()) {
+        VertxMetricsFactory factory = factories.iterator().next();
+        return factory.metrics(this, options);
+      } else {
+        log.warn("Metrics has been set to enabled but no VertxMetricsFactory found on classpath");
+        return new DummyVertxMetrics();
+      }
+    } else {
+      return new DummyVertxMetrics();
+    }
   }
 
   private ClusterManager getClusterManager(VertxOptions options) {
@@ -259,7 +305,7 @@ public class VertxImpl implements VertxInternal {
         return options.getClusterManager();
       } else {
         ClusterManager mgr;
-        String clusterManagerClassName = System.getProperty("vertx.clusterManager");
+        String clusterManagerClassName = System.getProperty("vertx.cluster.managerClass");
         if (clusterManagerClassName != null) {
           // We allow specify a sys prop for the cluster manager factory which overrides ServiceLoader
           try {
@@ -302,11 +348,13 @@ public class VertxImpl implements VertxInternal {
     return timerId;
   }
 
-  public ContextImpl createWorkerContext(boolean multiThreaded, String deploymentID, JsonObject config) {
+  public ContextImpl createWorkerContext(boolean multiThreaded, String deploymentID, JsonObject config,
+                                         ClassLoader tccl) {
     if (multiThreaded) {
-      return new MultiThreadedWorkerContext(this, internalOrderedFact.getExecutor(), workerPool, deploymentID, config);
+      return new MultiThreadedWorkerContext(this, internalOrderedFact.getExecutor(), workerPool, deploymentID, config, tccl);
     } else {
-      return new WorkerContext(this, internalOrderedFact.getExecutor(), workerOrderedFact.getExecutor(), deploymentID, config);
+      return new WorkerContext(this, internalOrderedFact.getExecutor(), workerOrderedFact.getExecutor(), deploymentID,
+                               config, tccl);
     }
   }
 
@@ -380,6 +428,10 @@ public class VertxImpl implements VertxInternal {
           eventLoopGroup.shutdownNow();
         }
 
+        if (metrics != null) {
+          metrics.close();
+        }
+
         checker.close();
 
         setContext(null);
@@ -403,8 +455,8 @@ public class VertxImpl implements VertxInternal {
   }
 
   @Override
-  public void deployVerticle(String verticleName, Handler<AsyncResult<String>> completionHandler) {
-    deployVerticle(verticleName, new DeploymentOptions(), completionHandler);
+  public void deployVerticle(String identifier, Handler<AsyncResult<String>> completionHandler) {
+    deployVerticle(identifier, new DeploymentOptions(), completionHandler);
   }
 
   @Override
@@ -418,27 +470,32 @@ public class VertxImpl implements VertxInternal {
   }
 
   @Override
-  public void deployVerticle(String verticleName) {
-    deployVerticle(verticleName, new DeploymentOptions(), null);
+  public void deployVerticle(String identifier) {
+    deployVerticle(identifier, new DeploymentOptions(), null);
   }
 
   @Override
-  public void deployVerticle(String verticleName, DeploymentOptions options) {
-    deployVerticle(verticleName, options, null);
+  public void deployVerticle(String identifier, DeploymentOptions options) {
+    deployVerticle(identifier, options, null);
   }
 
   @Override
-  public void deployVerticle(String verticleName, DeploymentOptions options, Handler<AsyncResult<String>> completionHandler) {
+  public void deployVerticle(String identifier, DeploymentOptions options, Handler<AsyncResult<String>> completionHandler) {
     if (options.isHA() && haManager != null) {
-      haManager.deployVerticle(verticleName, options, completionHandler);
+      haManager.deployVerticle(identifier, options, completionHandler);
     } else {
-      deploymentManager.deployVerticle(verticleName, options, completionHandler);
+      deploymentManager.deployVerticle(identifier, options, completionHandler);
     }
   }
 
   @Override
   public String getNodeID() {
     return clusterManager.getNodeID();
+  }
+
+  @Override
+  public void undeployVerticle(String deploymentID) {
+    undeployVerticle(deploymentID, res -> {});
   }
 
   @Override
@@ -506,6 +563,11 @@ public class VertxImpl implements VertxInternal {
     }
   }
 
+  @Override
+  public VertxMetrics metricsSPI() {
+    return metrics;
+  }
+
   private void configurePools(VertxOptions options) {
     checker = new BlockedThreadChecker(options.getBlockedThreadCheckPeriod(), options.getMaxEventLoopExecuteTime(),
                                        options.getMaxWorkerExecuteTime());
@@ -529,6 +591,7 @@ public class VertxImpl implements VertxInternal {
 
     boolean cancel() {
       cancelled = true;
+      metrics.timerEnded(timerID, true);
       return future.cancel(false);
     }
 
@@ -537,6 +600,7 @@ public class VertxImpl implements VertxInternal {
       this.timerID = timerID;
       this.handler = runnable;
       this.periodic = periodic;
+      metrics.timerCreated(timerID);
     }
 
     public void run() throws Exception {
@@ -554,6 +618,7 @@ public class VertxImpl implements VertxInternal {
 
     private void cleanupNonPeriodic() {
       VertxImpl.this.timeouts.remove(timerID);
+      metrics.timerEnded(timerID, false);
       ContextImpl context = getContext();
       context.removeCloseHook(this);
     }
@@ -565,5 +630,76 @@ public class VertxImpl implements VertxInternal {
       completionHandler.handle(Future.completedFuture());
     }
 
+  }
+
+  private class TimeoutStream implements ReadStream<Long>, Handler<Long> {
+
+    private final long delay;
+    private final boolean periodic;
+    private boolean paused;
+    private Long id;
+    private Handler<Long> handler;
+    private Handler<Void> endHandler;
+
+    public TimeoutStream(long delay, boolean periodic) {
+      this.delay = delay;
+      this.periodic = periodic;
+    }
+
+
+    @Override
+    public void handle(Long event) {
+      try {
+        if (!paused) {
+          handler.handle(event);
+        }
+      } finally {
+        if (!periodic && endHandler != null) {
+          endHandler.handle(null);
+        }
+      }
+    }
+
+    @Override
+    public ReadStream<Long> exceptionHandler(Handler<Throwable> handler) {
+      return this;
+    }
+
+    @Override
+    public ReadStream<Long> handler(Handler<Long> handler) {
+      if (handler != null) {
+        if (id != null) {
+          throw new IllegalStateException();
+        }
+        this.handler = handler;
+        id = scheduleTimeout(getOrCreateContext(), this, delay, periodic);
+      } else {
+        if (id != null) {
+          VertxImpl.this.cancelTimer(id);
+          if (endHandler != null) {
+            endHandler.handle(null);
+          }
+        }
+      }
+      return this;
+    }
+
+    @Override
+    public ReadStream<Long> pause() {
+      this.paused = true;
+      return this;
+    }
+
+    @Override
+    public ReadStream<Long> resume() {
+      this.paused = false;
+      return null;
+    }
+
+    @Override
+    public ReadStream<Long> endHandler(Handler<Void> endHandler) {
+      this.endHandler = endHandler;
+      return this;
+    }
   }
 }

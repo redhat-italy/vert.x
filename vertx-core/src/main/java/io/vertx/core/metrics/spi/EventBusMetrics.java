@@ -14,29 +14,22 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.core.impl;
+package io.vertx.core.metrics.spi;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Handler;
-import io.vertx.core.Verticle;
+import io.vertx.core.eventbus.ReplyFailure;
 
 /**
- * @author <a href="http://tfox.org">Tim Fox</a>
+ * @author <a href="mailto:nscavell@redhat.com">Nick Scavelli</a>
  */
-public interface Deployment {
+public interface EventBusMetrics extends BaseMetrics {
 
-  void addChild(Deployment deployment);
+  void handlerRegistered(String address);
 
-  void undeploy(Handler<AsyncResult<Void>> completionHandler);
+  void handlerUnregistered(String address);
 
-  void doUndeploy(ContextImpl undeployingContext, Handler<AsyncResult<Void>> completionHandler);
+  void messageSent(String address, boolean publish);
 
-  String identifier();
+  void messageReceived(String address);
 
-  DeploymentOptions deploymentOptions();
-
-  Verticle getVerticle();
-
-  boolean isChild();
+  void replyFailure(String address, ReplyFailure failure);
 }

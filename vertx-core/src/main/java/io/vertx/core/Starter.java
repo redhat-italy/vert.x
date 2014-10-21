@@ -26,16 +26,17 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Properties;
 import java.util.Scanner;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -47,6 +48,9 @@ import java.util.jar.Manifest;
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
 public class Starter {
+
+  public static final String VERTX_OPTIONS_PROP_PREFIX = "vertx.options";
+  public static final String DEPLOYMENT_OPTIONS_PROP_PREFIX = "vertx.deployment.options";
 
   private static final Logger log = LoggerFactory.getLogger(Starter.class);
 
@@ -89,16 +93,6 @@ public class Starter {
 
   private final CountDownLatch stopLatch = new CountDownLatch(1);
 
-  private String[] removeOptions(String[] args) {
-    List<String> munged = new ArrayList<>();
-    for (String arg: args) {
-      if (!arg.startsWith("-")) {
-        munged.add(arg);
-      }
-    }
-    return munged.toArray(new String[munged.size()]);
-  }
-
   private static <T> AsyncResultHandler<T> createLoggingHandler(final String message, final Handler<AsyncResult<T>> completionHandler) {
     return res -> {
       if (res.failed()) {
@@ -119,6 +113,58 @@ public class Starter {
         completionHandler.handle(res);
       }
     };
+  }
+
+  public static void configureFromSystemProperties(Object options, String prefix) {
+    Properties props = System.getProperties();
+    Enumeration e = props.propertyNames();
+    // Uhh, properties suck
+    while (e.hasMoreElements()) {
+      String propName = (String)e.nextElement();
+      String propVal = props.getProperty(propName);
+      if (propName.startsWith(prefix)) {
+        String fieldName = propName.substring(prefix.length());
+        Method setter = getSetter(fieldName, VertxOptions.class);
+        if (setter == null) {
+          log.warn("No such property to configure on options: " + options.getClass().getName() + "." + fieldName);
+          continue;
+        }
+        Class<?> argType = setter.getParameterTypes()[0];
+        Object arg;
+        try {
+          if (argType.equals(String.class)) {
+            arg = propVal;
+          } else if (argType.equals(int.class)) {
+            arg = Integer.valueOf(propVal);
+          } else if (argType.equals(long.class)) {
+            arg = Long.valueOf(propVal);
+          } else if (argType.equals(boolean.class)) {
+            arg = Boolean.valueOf(propVal);
+          } else {
+            log.warn("Invalid type for setter: " + argType);
+            continue;
+          }
+        } catch (IllegalArgumentException e2) {
+          log.warn("Invalid argtype:" + argType + " on options: " + options.getClass().getName() + "." + fieldName);
+          continue;
+        }
+        try {
+          setter.invoke(options, arg);
+        } catch (Exception ex) {
+          throw new VertxException("Failed to invoke setter: " + setter, ex);
+        }
+      }
+    }
+  }
+
+  private static Method getSetter(String fieldName, Class<?> clazz) {
+    Method[] meths = clazz.getDeclaredMethods();
+    for (Method meth: meths) {
+      if (("set" + fieldName).toLowerCase().equals(meth.getName().toLowerCase())) {
+        return meth;
+      }
+    }
+    return null;
   }
 
   private Vertx startVertx(boolean clustered, boolean ha, Args args) {
@@ -143,6 +189,7 @@ public class Starter {
       CountDownLatch latch = new CountDownLatch(1);
       AtomicReference<AsyncResult<Vertx>> result = new AtomicReference<>();
       VertxOptions options = new VertxOptions();
+      configureFromSystemProperties(options, VERTX_OPTIONS_PROP_PREFIX);
       options.setClusterHost(clusterHost).setClusterPort(clusterPort).setClustered(true);
       if (ha) {
         String haGroup = args.map.get("-hagroup");
@@ -228,8 +275,10 @@ public class Starter {
 
     boolean worker = args.map.get("-worker") != null;
     String message = (worker) ? "deploying worker verticle" : "deploying verticle";
+    DeploymentOptions deploymentOptions = new DeploymentOptions();
+    configureFromSystemProperties(deploymentOptions, DEPLOYMENT_OPTIONS_PROP_PREFIX);
     for (int i = 0; i < instances; i++) {
-      vertx.deployVerticle(main, new DeploymentOptions().setConfig(conf).setWorker(worker).setHA(ha), createLoggingHandler(message, res -> {
+      vertx.deployVerticle(main, deploymentOptions.setConfig(conf).setWorker(worker).setHA(ha), createLoggingHandler(message, res -> {
         if (res.failed()) {
           // Failed to deploy
           unblock();
@@ -340,16 +389,16 @@ public class Starter {
     // Also for vertx version
     String usage =
 
-      "    vertx run <main> [-options]                                                \n" +
+        "    vertx run <main> [-options]                                                \n" +
         "        runs a verticle called <main> in its own instance of vert.x.           \n" +
         "        <main> can be a JavaScript script, a Ruby script, A Groovy script,     \n" +
         "        a Java class, a Java source file, or a Python Script.\n\n" +
         "    valid options are:\n" +
-        "        -conf <config_file>    Specifies configuration that should be provided \n" +
-        "                               to the verticle. <config_file> should reference \n" +
-        "                               a text file containing a valid JSON object      \n" +
-        "                               which represents the configuration OR should be \n" +
-        "                               a string that contains valid JSON.              \n" +
+        "        -conf <config>         Specifies configuration that should be provided \n" +
+        "                               to the verticle. <config> should reference      \n" +
+        "                               either a text file containing a valid JSON      \n" +
+        "                               object which represents the configuration OR    \n" +
+        "                               be a JSON string.                               \n" +
         "        -instances <instances> specifies how many instances of the verticle    \n" +
         "                               will be deployed. Defaults to 1                 \n" +
         "        -worker                if specified then the verticle is a worker      \n" +
@@ -363,10 +412,23 @@ public class Starter {
         "        -cluster-host          host to bind to for cluster communication.      \n" +
         "                               If this is not specified vert.x will attempt    \n" +
         "                               to choose one from the available interfaces.  \n\n" +
+        "        -ha                    if specified the verticle will be deployed as a \n" +
+        "                               high availability (HA) deployment.              \n" +
+        "                               This means it can fail over to any other nodes \n" +
+        "                               in the cluster started with the same HA group   \n" +
+        "        -quorum                used in conjunction with -ha this specifies the \n" +
+        "                               minimum number of nodes in the cluster for any  \n" +
+        "                               HA deployments to be active. Defaults to 0      \n" +
+        "        -hagroup               used in conjunction with -ha this specifies the \n" +
+        "                               HA group this node will join. There can be      \n" +
+        "                               multiple HA groups in a cluster. Nodes will only\n" +
+        "                               failover to other nodes in the same group.      \n" +
+        "                               Defaults to __DEFAULT__                       \n\n" +
 
-        "    vertx version                                                              \n" +
+        "    vertx -version                                                             \n" +
         "        displays the version";
 
     log.info(usage);
   }
+
 }

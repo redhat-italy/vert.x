@@ -14,29 +14,16 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.core.impl;
-
-import io.vertx.core.AsyncResult;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Handler;
-import io.vertx.core.Verticle;
+package io.vertx.core.metrics.spi;
 
 /**
- * @author <a href="http://tfox.org">Tim Fox</a>
+ * @author <a href="mailto:nscavell@redhat.com">Nick Scavelli</a>
  */
-public interface Deployment {
+public interface BaseMetrics {
 
-  void addChild(Deployment deployment);
+  String baseName();
 
-  void undeploy(Handler<AsyncResult<Void>> completionHandler);
+  boolean isEnabled();
 
-  void doUndeploy(ContextImpl undeployingContext, Handler<AsyncResult<Void>> completionHandler);
-
-  String identifier();
-
-  DeploymentOptions deploymentOptions();
-
-  Verticle getVerticle();
-
-  boolean isChild();
+  void close();
 }
