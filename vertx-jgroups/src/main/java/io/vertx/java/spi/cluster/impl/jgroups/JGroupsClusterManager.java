@@ -1,6 +1,7 @@
 package io.vertx.java.spi.cluster.impl.jgroups;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.VertxException;
 import io.vertx.core.logging.Logger;
@@ -32,8 +33,11 @@ public class JGroupsClusterManager implements ClusterManager {
   public static final String VERTX_COUNTER_CHANNEL = "__vertx__counter_channel";
   public static final String VERTX_LOCK_CHANNEL = "__vertx__lock_channel";
 
-  public static final String CLUSTER_NAME = "JGROUPS-CLUSTER";
+  public static final String CLUSTER_NAME = "JGROUPS_CLUSTER";
+
   private VertxSPI vertx;
+
+  private ReplicatedMultiMapManager multiMapManager;
 
   private JChannel channel;
 
@@ -54,26 +58,23 @@ public class JGroupsClusterManager implements ClusterManager {
 
   @Override
   public <K, V> void getAsyncMultiMap(String name, MapOptions options, Handler<AsyncResult<AsyncMultiMap<K, V>>> handler) {
-    vertx.executeBlocking(() -> {
-      try {
-        return new ReplAsyncMultiMap<>(name, channel, vertx);
-      } catch (Exception e) {
-        throw new VertxException(e);
-      }
-    }, handler);
+    vertx.executeBlocking(() -> multiMapManager.createAsyncMultiMap(name), handler);
   }
 
   @Override
   public <K, V> void getAsyncMap(String name, MapOptions options, Handler<AsyncResult<AsyncMap<K, V>>> handler) {
+    checkCluster(handler);
+    throw new UnsupportedOperationException("Unsupported operation.");
   }
 
   @Override
   public <K, V> Map<K, V> getSyncMap(String name) {
-    return null;
+    throw new UnsupportedOperationException("Unsupported operation.");
   }
 
   @Override
   public void getLockWithTimeout(String name, long timeout, Handler<AsyncResult<Lock>> handler) {
+    checkCluster(handler);
     vertx.executeBlocking(
         () -> {
           ClusteredLockImpl lock = new ClusteredLockImpl(lockService, name);
@@ -93,8 +94,7 @@ public class JGroupsClusterManager implements ClusterManager {
 
   @Override
   public void getCounter(String name, Handler<AsyncResult<Counter>> handler) {
-    System.out.println("JGroupsClusterManager.getCounter");
-    System.out.println("name = [" + name + "], handler = [" + handler + "]");
+    checkCluster(handler);
     vertx.executeBlocking(
         () -> new ClusteredCounterImpl(vertx, counterService.getOrCreateCounter(name, 0L)),
         handler
@@ -143,6 +143,8 @@ public class JGroupsClusterManager implements ClusterManager {
         lockChannel.connect(CLUSTER_NAME);
         lockService = new LockService(lockChannel);
 
+        multiMapManager = new ReplicatedMultiMapManager(vertx, channel);
+
         return null;
       } catch (Exception e) {
         active = false;
@@ -178,6 +180,12 @@ public class JGroupsClusterManager implements ClusterManager {
   @Override
   public boolean isActive() {
     return active;
+  }
+
+  private <R> void checkCluster(Handler<AsyncResult<R>> handler) {
+    if(!active) {
+      handler.handle(Future.completedFuture(new VertxException("Cluster is not active!")));
+    }
   }
 
 }

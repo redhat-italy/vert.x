@@ -45,6 +45,7 @@ public class TopologyListener extends ReceiverAdapter {
   @Override
   public void viewAccepted(View view) {
     List<Address> newMembers = view.getMembers();
+    System.out.println("View accepted [" + view.getMembers().toString() + "]");
 
     nodeListener.ifPresent((listener) -> {
       newMembers.stream()
