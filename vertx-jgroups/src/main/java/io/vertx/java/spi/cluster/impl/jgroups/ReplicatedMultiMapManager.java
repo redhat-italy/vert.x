@@ -64,7 +64,7 @@ public class ReplicatedMultiMapManager {
       RspList<Object> responses = dispatcher.callRemoteMethods(null, action, REQUEST_OPTIONS_BLOCKING);
       Stream<Rsp<Object>> stream = responses.values().stream();
       if (log.isTraceEnabled()) {
-        stream.peek((rsp) -> log.trace(String.format("method createAsyncMultiMap address[%s] name[%s] response[%s]", channel.getAddressAsString(), name, rsp)));
+        stream = stream.peek((rsp) -> log.trace(String.format("method createAsyncMultiMap address[%s] name[%s] response[%s]", channel.getAddressAsString(), name, rsp)));
       }
       Optional<Rsp<Object>> rspException = stream
           .filter((rsp) -> rsp != null && rsp.hasException())
