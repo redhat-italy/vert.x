@@ -14,15 +14,10 @@ import io.vertx.core.spi.cluster.*;
 import io.vertx.java.spi.cluster.impl.jgroups.domain.ClusteredLockImpl;
 import io.vertx.java.spi.cluster.impl.jgroups.domain.ClusteredCounterImpl;
 import io.vertx.java.spi.cluster.impl.jgroups.listeners.TopologyListener;
-import io.vertx.java.spi.cluster.impl.jgroups.protocols.VERTX_LOCK;
 import org.jgroups.JChannel;
+import org.jgroups.blocks.ReplicatedHashMap;
 import org.jgroups.blocks.atomic.CounterService;
 import org.jgroups.blocks.locking.LockService;
-import org.jgroups.fork.ForkChannel;
-import org.jgroups.protocols.COUNTER;
-import org.jgroups.protocols.FRAG2;
-import org.jgroups.protocols.pbcast.STATE;
-import org.jgroups.stack.ProtocolStack;
 
 import java.util.List;
 import java.util.Map;
@@ -30,21 +25,16 @@ import java.util.Map;
 public class JGroupsClusterManager implements ClusterManager {
 
   private static final Logger log = LoggerFactory.getLogger(JGroupsClusterManager.class);
-  public static final String VERTX_COUNTER_CHANNEL = "__vertx__counter_channel";
-  public static final String VERTX_LOCK_CHANNEL = "__vertx__lock_channel";
 
   public static final String CLUSTER_NAME = "JGROUPS_CLUSTER";
 
   private VertxSPI vertx;
 
-  private ReplicatedMultiMapManager multiMapManager;
+  private CacheManager cacheManager;
 
   private JChannel channel;
 
-  private ForkChannel counterChannel;
   private CounterService counterService;
-
-  private ForkChannel lockChannel;
   private LockService lockService;
 
   private volatile boolean active;
@@ -58,18 +48,19 @@ public class JGroupsClusterManager implements ClusterManager {
 
   @Override
   public <K, V> void getAsyncMultiMap(String name, MapOptions options, Handler<AsyncResult<AsyncMultiMap<K, V>>> handler) {
-    vertx.executeBlocking(() -> multiMapManager.createAsyncMultiMap(name), handler);
+    checkCluster(handler);
+    cacheManager.createAsyncMultiMap(name, handler);
   }
 
   @Override
   public <K, V> void getAsyncMap(String name, MapOptions options, Handler<AsyncResult<AsyncMap<K, V>>> handler) {
     checkCluster(handler);
-    throw new UnsupportedOperationException("Unsupported operation.");
+    cacheManager.createAsyncMap(name, handler);
   }
 
   @Override
   public <K, V> Map<K, V> getSyncMap(String name) {
-    throw new UnsupportedOperationException("Unsupported operation.");
+    throw new UnsupportedOperationException("Not yet implemented.");
   }
 
   @Override
@@ -130,20 +121,16 @@ public class JGroupsClusterManager implements ClusterManager {
         channel.setReceiver(topologyListener);
         channel.connect(CLUSTER_NAME);
 
+
         address = channel.getAddressAsString();
         if (log.isInfoEnabled()) {
           log.info(String.format("Node id=%s join the cluster", address));
         }
 
-        counterChannel = new ForkChannel(channel, VERTX_COUNTER_CHANNEL, address, true, ProtocolStack.ABOVE, FRAG2.class, new COUNTER());
-        counterChannel.connect(CLUSTER_NAME);
-        counterService = new CounterService(counterChannel);
+        counterService = new CounterService(channel);
+        lockService = new LockService(channel);
 
-        lockChannel = new ForkChannel(channel, VERTX_LOCK_CHANNEL, address, true, ProtocolStack.ABOVE, FRAG2.class, new VERTX_LOCK());
-        lockChannel.connect(CLUSTER_NAME);
-        lockService = new LockService(lockChannel);
-
-        multiMapManager = new ReplicatedMultiMapManager(vertx, channel);
+        cacheManager = new CacheManager(vertx, channel);
 
         return null;
       } catch (Exception e) {
@@ -164,12 +151,8 @@ public class JGroupsClusterManager implements ClusterManager {
         log.info(String.format("Node id=%s leave the cluster", this.getNodeID()));
       }
 
-      counterChannel.close();
-      lockChannel.close();
       channel.close();
 
-      counterChannel = null;
-      lockChannel = null;
       channel = null;
       address = null;
 
@@ -183,7 +166,7 @@ public class JGroupsClusterManager implements ClusterManager {
   }
 
   private <R> void checkCluster(Handler<AsyncResult<R>> handler) {
-    if(!active) {
+    if (!active) {
       handler.handle(Future.completedFuture(new VertxException("Cluster is not active!")));
     }
   }

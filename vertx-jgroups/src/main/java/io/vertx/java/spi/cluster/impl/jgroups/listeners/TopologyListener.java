@@ -16,7 +16,6 @@
 
 package io.vertx.java.spi.cluster.impl.jgroups.listeners;
 
-import io.vertx.core.impl.StringEscapeUtils;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.spi.cluster.NodeListener;
@@ -24,7 +23,9 @@ import org.jgroups.Address;
 import org.jgroups.ReceiverAdapter;
 import org.jgroups.View;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class TopologyListener extends ReceiverAdapter {
