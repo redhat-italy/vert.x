@@ -1,4 +1,4 @@
-package io.vertx.java.spi.cluster.impl.jgroups;
+package io.vertx.java.spi.cluster.impl.jgroups.services;
 
 public interface RpcMultiMapService {
 

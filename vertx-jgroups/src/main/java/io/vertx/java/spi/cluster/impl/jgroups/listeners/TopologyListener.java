@@ -19,68 +19,75 @@ package io.vertx.java.spi.cluster.impl.jgroups.listeners;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.spi.cluster.NodeListener;
+import io.vertx.java.spi.cluster.impl.jgroups.support.LambdaLogger;
 import org.jgroups.Address;
+import org.jgroups.Message;
 import org.jgroups.ReceiverAdapter;
 import org.jgroups.View;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class TopologyListener extends ReceiverAdapter {
+public class TopologyListener extends ReceiverAdapter implements LambdaLogger {
 
-  private final static Logger log = LoggerFactory.getLogger(TopologyListener.class);
+  private final static Logger LOG = LoggerFactory.getLogger(TopologyListener.class);
+  private final String name;
 
   private List<Address> oldMembers = Collections.emptyList();
-  private Optional<NodeListener> nodeListener;
+  private Optional<NodeListener> nodeListener = Optional.empty();
 
-  public TopologyListener() {
-    this.nodeListener = Optional.empty();
+  public TopologyListener(String name) {
+    logDebug(() -> "[" + name + "] - Start topology listener");
+    this.name = name;
   }
 
-  public TopologyListener(NodeListener nodeListener) {
-    this.nodeListener = Optional.of(nodeListener);
+  @Override
+  public void receive(Message msg) {
+    System.out.println("[" + name + "] Message receive [" + msg + "]");
   }
 
   @Override
   public void viewAccepted(View view) {
     List<Address> newMembers = view.getMembers();
-    System.out.println("View accepted [" + view.getMembers().toString() + "]");
 
+    logDebug(() -> "[" + name + "] - View accepted [" + view + "] old view [" + oldMembers + "]");
+    System.out.println("[" + name + "] - [" + nodeListener + "]");
     nodeListener.ifPresent((listener) -> {
       newMembers.stream()
           .filter((member) -> !oldMembers.contains(member))
           .map(Address::toString)
-          .forEach((member) -> {
-            if (log.isInfoEnabled()) {
-              log.info(String.format("Notify join a new cluster member [%s]", member));
-            }
-            listener.nodeAdded(member);
-          });
+          .peek((member) -> logInfo(() -> String.format("[" + name + "] - Notify join a new cluster member [%s]", member)))
+          .forEach(listener::nodeAdded);
 
       oldMembers.stream()
           .filter((member) -> !newMembers.contains(member))
           .map(Address::toString)
-          .forEach((member) -> {
-            if (log.isInfoEnabled()) {
-              log.info(String.format("Notify removing a cluster member [%s]", member));
-            }
-            listener.nodeLeft(member);
-          });
+          .peek((member) -> logInfo(() -> String.format("[" + name + "] - Notify removing a cluster member [%s]", member)))
+          .forEach(listener::nodeLeft);
     });
 
-    oldMembers = newMembers;
+    oldMembers = new ArrayList<>(newMembers);
   }
 
   public void setNodeListener(NodeListener nodeListener) {
+    logDebug(() -> String.format("[" + name + "] - Set topology listener [%s]", nodeListener));
     this.nodeListener = Optional.of(nodeListener);
   }
 
   public List<String> getNodes() {
-    return oldMembers
-        .parallelStream()
+    List<String> result = oldMembers
+        .stream()
         .map(Address::toString)
         .collect(Collectors.toList());
+    logDebug(() -> String.format("[" + name + "] - Get Nodes from topology [%s]", result));
+    return result;
+  }
+
+  @Override
+  public Logger log() {
+    return LOG;
   }
 }

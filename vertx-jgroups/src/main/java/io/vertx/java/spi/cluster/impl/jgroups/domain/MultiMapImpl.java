@@ -3,15 +3,20 @@ package io.vertx.java.spi.cluster.impl.jgroups.domain;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
 
+import java.io.*;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-public class MultiMapImpl<K, V> {
+public class MultiMapImpl<K, V> implements Externalizable {
 
   private final static Logger log = LoggerFactory.getLogger(MultiMapImpl.class);
 
-  private final ConcurrentMap<K, ImmutableChoosableSet<V>> cache = new ConcurrentHashMap<>();
+  private Map<K, ImmutableChoosableSet<V>> cache = new ConcurrentHashMap<>();
+
+  public MultiMapImpl() {
+  }
 
   public void add(K k, V v) {
     if(log.isTraceEnabled()) {
@@ -44,4 +49,13 @@ public class MultiMapImpl<K, V> {
     return result[0];
   }
 
+  @Override
+  public void writeExternal(ObjectOutput out) throws IOException {
+    out.writeObject(cache);
+  }
+
+  @Override
+  public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+    cache = (Map<K, ImmutableChoosableSet<V>>) in.readObject();
+  }
 }

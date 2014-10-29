@@ -1,4 +1,4 @@
-package io.vertx.java.spi.cluster.impl.jgroups;
+package io.vertx.java.spi.cluster.impl.jgroups.services;
 
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
@@ -23,6 +23,7 @@ public class RpcServerObjDelegate implements RpcMapService, RpcMultiMapService, 
 
   private static final short MAP_CREATE = 20;
   private static final short MAP_PUT = 21;
+  private static final short MAP_PUTALL = 28;
   private static final short MAP_PUTIFABSENT = 22;
   private static final short MAP_REMOVE = 23;
   private static final short MAP_REMOVEIFPRESENT = 24;
@@ -30,18 +31,19 @@ public class RpcServerObjDelegate implements RpcMapService, RpcMultiMapService, 
   private static final short MAP_REPLACEIFPRESENT = 26;
   private static final short MAP_CLEAR = 27;
 
-  public static final MethodCallInterface.ZeroParameters CALL_MULTIMAP_CREATE = (name) -> new MethodCall(MULTIMAP_CREATE, name);
-  public static final MethodCallInterface.TwoParameter CALL_MULTIMAP_ADD = (name, p1, p2) -> new MethodCall(MULTIMAP_ADD, name, p1, p2);
-  public static final MethodCallInterface.TwoParameter CALL_MULTIMAP_REMOVE = (name, p1, p2) -> new MethodCall(MULTIMAP_REMOVE, name, p1, p2);
+  public static final MethodCallInterface.OneParameter CALL_MULTIMAP_CREATE = (name) -> new MethodCall(MULTIMAP_CREATE, name);
+  public static final MethodCallInterface.ThreeParameters CALL_MULTIMAP_ADD = (name, p1, p2) -> new MethodCall(MULTIMAP_ADD, name, p1, p2);
+  public static final MethodCallInterface.ThreeParameters CALL_MULTIMAP_REMOVE = (name, p1, p2) -> new MethodCall(MULTIMAP_REMOVE, name, p1, p2);
 
-  public static final MethodCallInterface.ZeroParameters CALL_MAP_CREATE = (name) -> new MethodCall(MAP_CREATE, name);
-  public static final MethodCallInterface.TwoParameter CALL_MAP_PUT = (name, p1, p2) -> new MethodCall(MAP_PUT, name, p1, p2);
-  public static final MethodCallInterface.TwoParameter CALL_MAP_PUTIFABSENT = (name, p1, p2) -> new MethodCall(MAP_PUTIFABSENT, name, p1, p2);
-  public static final MethodCallInterface.OneParameter CALL_MAP_REMOVE = (name, p1) -> new MethodCall(MAP_REMOVE, name, p1);
-  public static final MethodCallInterface.TwoParameter CALL_MAP_REMOVEIFPRESENT = (name, p1, p2) -> new MethodCall(MAP_REMOVEIFPRESENT, name, p1, p2);
-  public static final MethodCallInterface.TwoParameter CALL_MAP_REPLACE = (name, p1, p2) -> new MethodCall(MAP_REPLACE, name, p1, p2);
-  public static final MethodCallInterface.ThreeParameter CALL_MAP_REPLACEIFPRESENT = (name, p1, p2, p3) -> new MethodCall(MAP_REPLACEIFPRESENT, name, p1, p2, p3);
-  public static final MethodCallInterface.ZeroParameters CALL_MAP_CLEAR = (name) -> new MethodCall(MAP_CLEAR, name);
+  public static final MethodCallInterface.OneParameter CALL_MAP_CREATE = (name) -> new MethodCall(MAP_CREATE, name);
+  public static final MethodCallInterface.ThreeParameters CALL_MAP_PUT = (name, p1, p2) -> new MethodCall(MAP_PUT, name, p1, p2);
+  public static final MethodCallInterface.TwoParameters CALL_MAP_PUTALL = (name, p1) -> new MethodCall(MAP_PUTIFABSENT, name, p1);
+  public static final MethodCallInterface.ThreeParameters CALL_MAP_PUTIFABSENT = (name, p1, p2) -> new MethodCall(MAP_PUTIFABSENT, name, p1, p2);
+  public static final MethodCallInterface.TwoParameters CALL_MAP_REMOVE = (name, p1) -> new MethodCall(MAP_REMOVE, name, p1);
+  public static final MethodCallInterface.ThreeParameters CALL_MAP_REMOVEIFPRESENT = (name, p1, p2) -> new MethodCall(MAP_REMOVEIFPRESENT, name, p1, p2);
+  public static final MethodCallInterface.ThreeParameters CALL_MAP_REPLACE = (name, p1, p2) -> new MethodCall(MAP_REPLACE, name, p1, p2);
+  public static final MethodCallInterface.FourParameters CALL_MAP_REPLACEIFPRESENT = (name, p1, p2, p3) -> new MethodCall(MAP_REPLACEIFPRESENT, name, p1, p2, p3);
+  public static final MethodCallInterface.OneParameter CALL_MAP_CLEAR = (name) -> new MethodCall(MAP_CLEAR, name);
 
   private static final Map<Short, Method> methods = new HashMap<>();
   static {
@@ -52,6 +54,7 @@ public class RpcServerObjDelegate implements RpcMapService, RpcMultiMapService, 
 
       methods.put(MAP_CREATE, RpcServerObjDelegate.class.getMethod("mapCreate", String.class));
       methods.put(MAP_PUT, RpcServerObjDelegate.class.getMethod("mapPut", String.class, Object.class, Object.class));
+      methods.put(MAP_PUTALL, RpcServerObjDelegate.class.getMethod("mapPutAll", String.class, Map.class));
       methods.put(MAP_PUTIFABSENT, RpcServerObjDelegate.class.getMethod("mapPutIfAbsent", String.class, Object.class, Object.class));
       methods.put(MAP_REMOVE, RpcServerObjDelegate.class.getMethod("mapRemove", String.class, Object.class));
       methods.put(MAP_REMOVEIFPRESENT, RpcServerObjDelegate.class.getMethod("mapRemoveIfPresent", String.class, Object.class, Object.class));
@@ -103,6 +106,11 @@ public class RpcServerObjDelegate implements RpcMapService, RpcMultiMapService, 
   @Override
   public <K, V> void mapPut(String name, K k, V v) {
     mapService.mapPut(name, k, v);
+  }
+
+  @Override
+  public <K, V> void mapPutAll(String name, Map<K, V> m) {
+    mapService.mapPutAll(name, m);
   }
 
   @Override

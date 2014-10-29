@@ -1,16 +1,17 @@
-package io.vertx.java.spi.cluster.impl.jgroups.domain;
+package io.vertx.java.spi.cluster.impl.jgroups.domain.async;
 
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.VertxException;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ChoosableIterable;
+import io.vertx.java.spi.cluster.impl.jgroups.domain.ImmutableChoosableSet;
+import io.vertx.java.spi.cluster.impl.jgroups.domain.MultiMapImpl;
 import io.vertx.java.spi.cluster.impl.jgroups.support.LambdaLogger;
-import io.vertx.java.spi.cluster.impl.jgroups.RpcExecutorService;
-import io.vertx.java.spi.cluster.impl.jgroups.RpcServerObjDelegate;
+import io.vertx.java.spi.cluster.impl.jgroups.services.RpcExecutorService;
+import io.vertx.java.spi.cluster.impl.jgroups.services.RpcServerObjDelegate;
 
 public class AsyncMultiMapWrapper<K, V> implements AsyncMultiMap<K, V>, LambdaLogger {
 

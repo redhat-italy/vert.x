@@ -1,7 +1,6 @@
-package io.vertx.java.spi.cluster.impl.jgroups;
+package io.vertx.java.spi.cluster.impl.jgroups.services;
 
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.VertxException;
 import io.vertx.core.logging.Logger;
@@ -26,9 +25,14 @@ public class DefaultRpcExecutorService implements RpcExecutorService, LambdaLogg
   private final VertxSPI vertx;
   private final RpcDispatcher dispatcher;
 
-  protected DefaultRpcExecutorService(VertxSPI vertx, RpcDispatcher dispatcher) {
+  public DefaultRpcExecutorService(VertxSPI vertx, RpcDispatcher dispatcher) {
     this.vertx = vertx;
     this.dispatcher = dispatcher;
+  }
+
+  @Override
+  public <T> T remoteExecute(MethodCall action) {
+    return this.execute(action);
   }
 
   @Override
@@ -51,7 +55,7 @@ public class DefaultRpcExecutorService implements RpcExecutorService, LambdaLogg
     } catch (Exception e) {
       throw new VertxException(e);
     }
-    this.<T>logTrace(responses::getResults, Object::toString);
+    this.<Rsp<T>>logTrace(() -> responses.values().stream(), Object::toString);
 
     Optional<Rsp<T>> optional = responses.values().stream()
         .peek((rsp) -> logTrace(rsp::toString))

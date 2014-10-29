@@ -1,4 +1,4 @@
-package io.vertx.java.spi.cluster.impl.jgroups;
+package io.vertx.java.spi.cluster.impl.jgroups.services;
 
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
@@ -28,10 +28,13 @@ public class DefaultRpcMapService implements RpcMapService, LambdaLogger {
   }
 
   public <K, V, R> R executeAndReturn(String name, Function<Map<K, V>, R> function) {
+    return function.apply((Map<K, V>) maps.computeIfAbsent(name, (k) -> new ConcurrentHashMap()));
+/*
     Map map = Optional
         .ofNullable(maps.get(name))
         .orElseThrow(() -> new IllegalStateException(String.format("Map [%s] not found.", name)));
-    return function.apply((Map<K, V>)map);
+    return function.apply((Map<K, V>) map);
+*/
   }
 
   public <K, V> Map<K, V> mapGet(String name) {
@@ -40,14 +43,14 @@ public class DefaultRpcMapService implements RpcMapService, LambdaLogger {
 
   @Override
   public <K, V> boolean mapCreate(String name) {
-    logTrace(() -> String.format("method mapCreate name[%s]", name));
+    logDebug(() -> String.format("method mapCreate name[%s]", name));
     maps.computeIfAbsent(name, (key) -> new ConcurrentHashMap());
     return true;
   }
 
   @Override
   public <K, V> void mapPut(String name, K k, V v) {
-    logTrace(() -> "RpcMapService.put name = [" + name + "], k = [" + k + "], v = [" + v + "]");
+    logDebug(() -> "RpcMapService.put name = [" + name + "], k = [" + k + "], v = [" + v + "]");
     this.<K, V>execute(name, (map) -> map.put(k, v));
   }
 
@@ -85,6 +88,12 @@ public class DefaultRpcMapService implements RpcMapService, LambdaLogger {
   public <K, V> void mapClear(String name) {
     logTrace(() -> "RpcMapService.clear name = [" + name + "]");
     this.<K, V>execute(name, (map) -> map.clear());
+  }
+
+  @Override
+  public <K, V> void mapPutAll(String name, Map<K, V> m) {
+    logTrace(() -> "RpcMapService.mapPutAll name = [" + name + "]");
+    this.execute(name, (map) -> map.putAll(m));
   }
 
   @Override

@@ -5,14 +5,26 @@ import io.vertx.core.logging.Logger;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 public interface LambdaLogger {
 
   Logger log();
 
-  default <T> void logTrace(Supplier<List<T>> supplier, Function<T, String> transformer) {
+  default <T> void logError(Supplier<Stream<T>> supplier, Function<T, String> transformer) {
+    supplier.get()
+        .map(transformer)
+        .forEach(log()::error);
+  }
+
+  default void logError(Supplier<String> message) {
+    log().error(message.get());
+  }
+
+  default <T> void logTrace(Supplier<Stream<T>> supplier, Function<T, String> transformer) {
     if (log().isTraceEnabled()) {
-      supplier.get().forEach((t) -> log().trace(transformer.apply(t)));
+      supplier.get()
+          .map(transformer).forEach(log()::trace);
     }
   }
 

@@ -1,22 +1,22 @@
-package io.vertx.java.spi.cluster.impl.jgroups;
+package io.vertx.java.spi.cluster.impl.jgroups.services;
 
 import org.jgroups.blocks.MethodCall;
 
 public interface MethodCallInterface {
 
-  public interface ZeroParameters extends MethodCallInterface {
+  public interface OneParameter extends MethodCallInterface {
     MethodCall method(String name);
   }
 
-  public interface OneParameter extends MethodCallInterface {
+  public interface TwoParameters extends MethodCallInterface {
     MethodCall method(String name, Object p1);
   }
 
-  public interface TwoParameter extends MethodCallInterface {
+  public interface ThreeParameters extends MethodCallInterface {
     MethodCall method(String name, Object p1, Object p2);
   }
 
-  public interface ThreeParameter extends MethodCallInterface {
+  public interface FourParameters extends MethodCallInterface {
     MethodCall method(String name, Object p1, Object p2, Object p3);
   }
 }

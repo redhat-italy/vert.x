@@ -1,4 +1,4 @@
-package io.vertx.java.spi.cluster.impl.jgroups.domain;
+package io.vertx.java.spi.cluster.impl.jgroups.domain.async;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
@@ -6,8 +6,8 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.spi.cluster.VertxSPI;
-import io.vertx.java.spi.cluster.impl.jgroups.RpcExecutorService;
-import io.vertx.java.spi.cluster.impl.jgroups.RpcServerObjDelegate;
+import io.vertx.java.spi.cluster.impl.jgroups.services.RpcExecutorService;
+import io.vertx.java.spi.cluster.impl.jgroups.services.RpcServerObjDelegate;
 
 import java.util.Map;
 

@@ -18,18 +18,19 @@ package io.vertx.java.spi.cluster.impl.jgroups.domain;
 
 import io.vertx.core.spi.cluster.ChoosableIterable;
 
+import java.io.*;
 import java.util.Collections;
 import java.util.Iterator;
 
-public interface ImmutableChoosableSet<T> extends ChoosableIterable<T> {
+public interface ImmutableChoosableSet<T> extends Externalizable, ChoosableIterable<T> {
 
-    ImmutableChoosableSet<T> add(T value);
+  ImmutableChoosableSet<T> add(T value);
 
-    ImmutableChoosableSet<T> remove(T value);
+  ImmutableChoosableSet<T> remove(T value);
 
-    T head();
+  T head();
 
-    ImmutableChoosableSet<T> tail();
+  ImmutableChoosableSet<T> tail();
 
 
   public static final ImmutableChoosableSet emptySet = new ImmutableChoosableSet() {
@@ -75,5 +76,12 @@ public interface ImmutableChoosableSet<T> extends ChoosableIterable<T> {
       return "[]";
     }
 
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+    }
   };
 }

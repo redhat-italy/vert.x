@@ -16,6 +16,9 @@
 
 package io.vertx.java.spi.cluster.impl.jgroups.domain;
 
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.Collections;
 import java.util.Iterator;
 
@@ -25,6 +28,9 @@ public class ImmutableChoosableSetImpl<T> implements ImmutableChoosableSet<T> {
   private ImmutableChoosableSet<T> next;
 
   private transient ImmutableChoosableSet<T> roundRobinState = this;
+
+  public ImmutableChoosableSetImpl() {
+  }
 
   private ImmutableChoosableSetImpl(T value, ImmutableChoosableSet<T> next) {
     this.value = value;
@@ -119,4 +125,24 @@ public class ImmutableChoosableSetImpl<T> implements ImmutableChoosableSet<T> {
     return "[" + value + ", " + next + "]";
   }
 
+  @Override
+  public void writeExternal(ObjectOutput out) throws IOException {
+    out.writeObject(value);
+    if (next.isEmpty()) {
+      out.writeObject(null);
+    } else {
+      out.writeObject(next);
+    }
+  }
+
+  @Override
+  public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+    value = (T) in.readObject();
+    Object tail = in.readObject();
+    if (tail == null) {
+      next = ImmutableChoosableSet.emptySet;
+    } else {
+      next = (ImmutableChoosableSet<T>) tail;
+    }
+  }
 }

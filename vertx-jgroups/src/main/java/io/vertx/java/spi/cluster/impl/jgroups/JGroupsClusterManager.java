@@ -14,17 +14,18 @@ import io.vertx.core.spi.cluster.*;
 import io.vertx.java.spi.cluster.impl.jgroups.domain.ClusteredLockImpl;
 import io.vertx.java.spi.cluster.impl.jgroups.domain.ClusteredCounterImpl;
 import io.vertx.java.spi.cluster.impl.jgroups.listeners.TopologyListener;
+import io.vertx.java.spi.cluster.impl.jgroups.support.LambdaLogger;
 import org.jgroups.JChannel;
-import org.jgroups.blocks.ReplicatedHashMap;
 import org.jgroups.blocks.atomic.CounterService;
 import org.jgroups.blocks.locking.LockService;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
-public class JGroupsClusterManager implements ClusterManager {
+public class JGroupsClusterManager implements ClusterManager, LambdaLogger {
 
-  private static final Logger log = LoggerFactory.getLogger(JGroupsClusterManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JGroupsClusterManager.class);
 
   public static final String CLUSTER_NAME = "JGROUPS_CLUSTER";
 
@@ -60,7 +61,7 @@ public class JGroupsClusterManager implements ClusterManager {
 
   @Override
   public <K, V> Map<K, V> getSyncMap(String name) {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    return cacheManager.createSyncMap(name);
   }
 
   @Override
@@ -70,12 +71,10 @@ public class JGroupsClusterManager implements ClusterManager {
         () -> {
           ClusteredLockImpl lock = new ClusteredLockImpl(lockService, name);
           if (lock.acquire(timeout)) {
-            if (log.isDebugEnabled()) {
-              log.debug(String.format("Lock acquired on [%s]", name));
-            }
+            logDebug(() -> String.format("Lock acquired on [%s]", name));
             return lock;
           } else {
-            log.error(String.format("Timed out waiting to get lock [%s]", name));
+            logError(() -> String.format("Timed out waiting to get lock [%s]", name));
             throw new VertxException(String.format("Timed out waiting to get lock [%s]", name));
           }
         },
@@ -99,6 +98,7 @@ public class JGroupsClusterManager implements ClusterManager {
 
   @Override
   public List<String> getNodes() {
+    System.out.println("Channel view [" + channel.getViewAsString() + "]");
     return topologyListener.getNodes();
   }
 
@@ -117,20 +117,19 @@ public class JGroupsClusterManager implements ClusterManager {
 
       try {
         channel = new JChannel("jgroups-udp.xml");
-        topologyListener = new TopologyListener();
+        topologyListener = new TopologyListener(UUID.randomUUID().toString());
         channel.setReceiver(topologyListener);
         channel.connect(CLUSTER_NAME);
 
-
         address = channel.getAddressAsString();
-        if (log.isInfoEnabled()) {
-          log.info(String.format("Node id=%s join the cluster", address));
-        }
+
+        logInfo(() -> String.format("Node id=%s join the cluster", address));
 
         counterService = new CounterService(channel);
         lockService = new LockService(channel);
 
         cacheManager = new CacheManager(vertx, channel);
+        cacheManager.start();
 
         return null;
       } catch (Exception e) {
@@ -147,9 +146,8 @@ public class JGroupsClusterManager implements ClusterManager {
         return null;
       }
       active = false;
-      if (log.isInfoEnabled()) {
-        log.info(String.format("Node id=%s leave the cluster", this.getNodeID()));
-      }
+
+      logInfo(() -> String.format("Node id=%s leave the cluster", this.getNodeID()));
 
       channel.close();
 
@@ -171,4 +169,8 @@ public class JGroupsClusterManager implements ClusterManager {
     }
   }
 
+  @Override
+  public Logger log() {
+    return LOG;
+  }
 }

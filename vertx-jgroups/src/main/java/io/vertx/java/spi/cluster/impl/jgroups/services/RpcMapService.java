@@ -1,4 +1,6 @@
-package io.vertx.java.spi.cluster.impl.jgroups;
+package io.vertx.java.spi.cluster.impl.jgroups.services;
+
+import java.util.Map;
 
 public interface RpcMapService {
 
@@ -17,4 +19,6 @@ public interface RpcMapService {
   <K, V> boolean mapReplaceIfPresent(String name, K k, V oldValue, V newValue);
 
   <K, V> void mapClear(String name);
+
+  <K, V> void mapPutAll(String name, Map<K, V> m);
 }

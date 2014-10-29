@@ -1,4 +1,4 @@
-package io.vertx.java.spi.cluster.impl.jgroups;
+package io.vertx.java.spi.cluster.impl.jgroups.services;
 
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
