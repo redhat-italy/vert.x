@@ -21,6 +21,8 @@ import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
 import io.vertx.core.Verticle;
 
+import java.util.Set;
+
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
@@ -36,7 +38,7 @@ public interface Deployment {
 
   DeploymentOptions deploymentOptions();
 
-  Verticle getVerticle();
+  Set<Verticle> getVerticles();
 
   boolean isChild();
 }

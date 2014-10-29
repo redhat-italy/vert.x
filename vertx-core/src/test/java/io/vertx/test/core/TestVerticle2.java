@@ -17,36 +17,33 @@
 package io.vertx.test.core;
 
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.json.JsonObject;
+import io.vertx.core.Context;
 
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
-public class TestVerticle extends AbstractVerticle {
+public class TestVerticle2 extends AbstractVerticle {
 
-  public static AtomicInteger instanceCount = new AtomicInteger();
-  public static List<String> processArgs;
-  public static JsonObject conf;
-
-  public TestVerticle() {
-  }
+  private static Set<Context> contexts = new HashSet<>();
 
   @Override
   public void start() throws Exception {
-    processArgs = vertx.context().processArgs();
-    conf = vertx.context().config();
-    if (Thread.currentThread().getContextClassLoader() != getClass().getClassLoader()) {
-      throw new IllegalStateException("Wrong tccl!");
+    synchronized (contexts) {
+      if (contexts.contains(vertx.context())) {
+        throw new IllegalStateException("Same context!");
+      } else {
+        contexts.add(vertx.context());
+        vertx.eventBus().send("tvstarted", "started");
+      }
     }
-    vertx.eventBus().send("testcounts",
-      new JsonObject().put("deploymentID", vertx.context().deploymentID()).put("count", instanceCount.incrementAndGet()));
   }
 
   @Override
   public void stop() throws Exception {
+    vertx.eventBus().send("tvstopped", "stopped");
   }
 
 }

@@ -289,7 +289,7 @@ public abstract class EventBusTestBase extends VertxTestBase {
   @Test
   public void testSendJsonObject() {
     JsonObject obj = new JsonObject();
-    obj.putString(TestUtils.randomUnicodeString(100), TestUtils.randomUnicodeString(100)).putNumber(TestUtils.randomUnicodeString(100), TestUtils.randomInt());
+    obj.put(TestUtils.randomUnicodeString(100), TestUtils.randomUnicodeString(100)).put(TestUtils.randomUnicodeString(100), TestUtils.randomInt());
     testSend(obj, (received) -> {
       assertEquals(obj, received);
       assertFalse(obj == received); // Make sure it's copied
@@ -299,7 +299,7 @@ public abstract class EventBusTestBase extends VertxTestBase {
   @Test
   public void testReplyJsonObject() {
     JsonObject obj = new JsonObject();
-    obj.putString(TestUtils.randomUnicodeString(100), TestUtils.randomUnicodeString(100)).putNumber(TestUtils.randomUnicodeString(100), TestUtils.randomInt());
+    obj.put(TestUtils.randomUnicodeString(100), TestUtils.randomUnicodeString(100)).put(TestUtils.randomUnicodeString(100), TestUtils.randomInt());
     testReply(obj, (received) -> {
       assertEquals(obj, received);
       assertFalse(obj == received); // Make sure it's copied
@@ -309,7 +309,7 @@ public abstract class EventBusTestBase extends VertxTestBase {
   @Test
   public void testPublishJsonObject() {
     JsonObject obj = new JsonObject();
-    obj.putString(TestUtils.randomUnicodeString(100), TestUtils.randomUnicodeString(100)).putNumber(TestUtils.randomUnicodeString(100), TestUtils.randomInt());
+    obj.put(TestUtils.randomUnicodeString(100), TestUtils.randomUnicodeString(100)).put(TestUtils.randomUnicodeString(100), TestUtils.randomInt());
     testPublish(obj, (received) -> {
       assertEquals(obj, received);
       assertFalse(obj == received); // Make sure it's copied
@@ -326,23 +326,6 @@ public abstract class EventBusTestBase extends VertxTestBase {
     testReply("foo", "foo", null, new DeliveryOptions().addHeader("uhqwduh", "qijwdqiuwd").addHeader("iojdijef", "iqjwddh"));
   }
 
-  @Test
-  public void testForward(){
-    testForward(TestUtils.randomUnicodeString(100));
-  }
-  
-  @Test
-  public void testForwardWithHeaders(){
-    DeliveryOptions options = new DeliveryOptions();
-    options.addHeader("first", "first");
-    options.addHeader("second", "second");
-    testForwardWithHeaders("Test body", options);
-  }
-    
-  protected abstract <T> void testForward(T val);
-  
-  protected abstract <T> void testForwardWithHeaders(T val, DeliveryOptions options);
-  
   protected <T> void testSend(T val) {
     testSend(val, null);
   }
