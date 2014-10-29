@@ -37,21 +37,19 @@ public class JGroupsHATest extends HATest {
     Vertx vertx1 = startVertx(3);
     Vertx vertx2 = startVertx(3);
     Vertx vertx3 = startVertx(3);
-
-    DeploymentOptions options = new DeploymentOptions().setHA(true);
-    JsonObject config = new JsonObject().putString("foo", "bar");
+    DeploymentOptions options = new DeploymentOptions().setHa(true);
+    JsonObject config = new JsonObject().put("foo", "bar");
     options.setConfig(config);
     vertx1.deployVerticle("java:" + HAVerticle1.class.getName(), options, ar -> {
-      System.out.println("vertx1.deployVerticle OK");
       assertTrue(ar.succeeded());
       assertTrue(vertx1.deployments().contains(ar.result()));
+      ;
     });
     vertx2.deployVerticle("java:" + HAVerticle2.class.getName(), options, ar -> {
-      System.out.println("vertx2.deployVerticle OK");
       assertTrue(ar.succeeded());
       assertTrue(vertx2.deployments().contains(ar.result()));
+      ;
     });
-
     waitUntil(() -> vertx1.deployments().size() == 1 && vertx2.deployments().size() == 1);
     // Now close vertx3 - quorum should then be lost and verticles undeployed
     CountDownLatch latch = new CountDownLatch(1);
