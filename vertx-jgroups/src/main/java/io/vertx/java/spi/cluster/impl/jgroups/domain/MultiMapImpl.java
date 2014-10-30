@@ -58,4 +58,11 @@ public class MultiMapImpl<K, V> implements Externalizable {
   public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
     cache = (Map<K, ImmutableChoosableSet<V>>) in.readObject();
   }
+
+  @Override
+  public String toString() {
+    return "MultiMapImpl{" +
+        "cache=" + cache +
+        '}';
+  }
 }

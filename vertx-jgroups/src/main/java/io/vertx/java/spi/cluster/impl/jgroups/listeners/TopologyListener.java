@@ -16,31 +16,36 @@
 
 package io.vertx.java.spi.cluster.impl.jgroups.listeners;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.impl.LoggerFactory;
+import io.vertx.core.spi.cluster.Action;
 import io.vertx.core.spi.cluster.NodeListener;
+import io.vertx.core.spi.cluster.VertxSPI;
 import io.vertx.java.spi.cluster.impl.jgroups.support.LambdaLogger;
-import org.jgroups.Address;
-import org.jgroups.Message;
-import org.jgroups.ReceiverAdapter;
-import org.jgroups.View;
+import org.jgroups.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class TopologyListener extends ReceiverAdapter implements LambdaLogger {
 
   private final static Logger LOG = LoggerFactory.getLogger(TopologyListener.class);
   private final String name;
+  private final VertxSPI vertx;
 
-  private List<Address> oldMembers = Collections.emptyList();
+  private ViewId viewId;
+  private List<Address> members = Collections.emptyList();
   private Optional<NodeListener> nodeListener = Optional.empty();
 
-  public TopologyListener(String name) {
+  public TopologyListener(VertxSPI vertx, String name) {
     logDebug(() -> "[" + name + "] - Start topology listener");
+    this.vertx = vertx;
     this.name = name;
   }
 
@@ -51,39 +56,49 @@ public class TopologyListener extends ReceiverAdapter implements LambdaLogger {
 
   @Override
   public void viewAccepted(View view) {
-    List<Address> newMembers = view.getMembers();
+    if (view.getViewId() == null) {
+      logTrace(() -> "[" + name + "] - Called View accepted [" + view + "] with ViewId null.");
+      return;
+    }
 
-    logDebug(() -> "[" + name + "] - View accepted [" + view + "] old view [" + oldMembers + "]");
-    System.out.println("[" + name + "] - [" + nodeListener + "]");
-    nodeListener.ifPresent((listener) -> {
+    if (viewId != null && view.getViewId().compareToIDs(viewId) <= 0) {
+      logTrace(() -> "[" + name + "] - Called View accepted [" + view + "] but there's no changes.");
+      return;
+    }
+    List<Address> oldMembers = members;
+    members = view.getMembers();
+    viewId = view.getViewId().copy();
+
+    nodeListener.ifPresent((listener) -> vertx.executeBlocking(() -> {
+      List<Address> newMembers = members;
+
+      Predicate<Address> oldMemberNodeHasLeft = (member) -> !newMembers.contains(member);
+      Predicate<Address> newMemberNodeJoin = (member) -> !oldMembers.contains(member);
+      Consumer<Address> nodeJoin = (member) -> listener.nodeAdded(member.toString());
+      Consumer<Address> nodeLeft = (member) -> listener.nodeAdded(member.toString());
+
       newMembers.stream()
-          .filter((member) -> !oldMembers.contains(member))
-          .map(Address::toString)
-          .peek((member) -> logInfo(() -> String.format("[" + name + "] - Notify join a new cluster member [%s]", member)))
-          .forEach(listener::nodeAdded);
-
+          .filter(newMemberNodeJoin)
+          .forEach(nodeJoin);
       oldMembers.stream()
-          .filter((member) -> !newMembers.contains(member))
-          .map(Address::toString)
-          .peek((member) -> logInfo(() -> String.format("[" + name + "] - Notify removing a cluster member [%s]", member)))
-          .forEach(listener::nodeLeft);
-    });
+          .filter(oldMemberNodeHasLeft)
+          .forEach(nodeLeft);
 
-    oldMembers = new ArrayList<>(newMembers);
+      return null;
+    }, (r) -> Function.identity()));
   }
 
   public void setNodeListener(NodeListener nodeListener) {
-    logDebug(() -> String.format("[" + name + "] - Set topology listener [%s]", nodeListener));
+    logDebug(() -> "[" + name + "] - Set topology listener [" + nodeListener + "]");
     this.nodeListener = Optional.of(nodeListener);
   }
 
   public List<String> getNodes() {
-    List<String> result = oldMembers
+    logDebug(() -> "[" + name + "] - Get Nodes from topology [" + members + "]");
+    return members
         .stream()
         .map(Address::toString)
         .collect(Collectors.toList());
-    logDebug(() -> String.format("[" + name + "] - Get Nodes from topology [%s]", result));
-    return result;
   }
 
   @Override

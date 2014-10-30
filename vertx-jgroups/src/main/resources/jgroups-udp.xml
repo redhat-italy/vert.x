@@ -78,7 +78,6 @@
   <!--<pbcast.STATE_TRANSFER  />-->
   <!--<pbcast.FLUSH  />-->
   <COUNTER />
-  <CENTRAL_LOCK />
-  <!--<CENTRAL_LOCK use_thread_id_for_lock_owner="false" />-->
+  <CENTRAL_LOCK use_thread_id_for_lock_owner="false" />
 </config>
 

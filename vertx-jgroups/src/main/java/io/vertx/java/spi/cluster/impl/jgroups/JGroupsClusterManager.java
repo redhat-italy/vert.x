@@ -41,6 +41,7 @@ public class JGroupsClusterManager implements ClusterManager, LambdaLogger {
   private volatile boolean active;
   private String address;
   private TopologyListener topologyListener;
+  private long topologyTriggerId;
 
   @Override
   public void setVertx(VertxSPI vertx) {
@@ -117,7 +118,7 @@ public class JGroupsClusterManager implements ClusterManager, LambdaLogger {
 
       try {
         channel = new JChannel("jgroups-udp.xml");
-        topologyListener = new TopologyListener(UUID.randomUUID().toString());
+        topologyListener = new TopologyListener(vertx, UUID.randomUUID().toString());
         channel.setReceiver(topologyListener);
         channel.connect(CLUSTER_NAME);
 
@@ -131,6 +132,11 @@ public class JGroupsClusterManager implements ClusterManager, LambdaLogger {
         cacheManager = new CacheManager(vertx, channel);
         cacheManager.start();
 
+        topologyTriggerId = vertx.setPeriodic(100, (id) -> {
+          if (active) {
+            topologyListener.viewAccepted(channel.getView());
+          }
+        });
         return null;
       } catch (Exception e) {
         active = false;
@@ -146,6 +152,8 @@ public class JGroupsClusterManager implements ClusterManager, LambdaLogger {
         return null;
       }
       active = false;
+
+      vertx.cancelTimer(topologyTriggerId);
 
       logInfo(() -> String.format("Node id=%s leave the cluster", this.getNodeID()));
 
