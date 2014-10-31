@@ -60,6 +60,7 @@
 
     <java.version>1.8</java.version>
 
+    <jgroups.version>3.6.0.Final</jgroups.version>
     <netty.version>4.0.23.Final</netty.version>
     <jackson.version>2.4.3</jackson.version>
     <hazelcast.version>3.3.1</hazelcast.version>
@@ -81,6 +82,7 @@
   <modules>
     <module>vertx-core</module>
     <module>vertx-hazelcast</module>
+    <module>vertx-jgroups</module>
   </modules>
 
   <dependencyManagement>
@@ -103,6 +105,12 @@
         <version>${project.version}</version>
       </dependency>
       <!-- 3rd party -->
+      <dependency>
+        <groupId>org.jgroups</groupId>
+        <artifactId>jgroups</artifactId>
+        <version>${jgroups.version}</version>
+      </dependency>
+
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-all</artifactId>
