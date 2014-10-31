@@ -88,8 +88,6 @@ import java.util.ArrayDeque;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
@@ -270,7 +268,19 @@ public class HttpServerImpl implements HttpServer, Closeable {
               res = Future.completedFuture(future.cause());
               listening = false;
             }
-            listenContext.execute(() -> listenHandler.handle(res), true);
+            // FIXME - workaround for https://github.com/netty/netty/issues/2586
+            // If listen already succeeded on a different event loop, and then addListener is called again
+            // on the completed future from a different event loop then the handler will be called on the original
+            // event loop not on the when that called addListener.
+            // To reproduce set the boolean parameter on execute (below) to true.
+            // Then run Httptest.testTwoServersSameAddressDifferentContext()
+            try {
+              listenContext.execute(() -> {
+                listenHandler.handle(res);
+              }, false);
+            } catch (Exception e) {
+              e.printStackTrace();
+            }
           } else if (!future.isSuccess()) {
             listening  = false;
             // No handler - log so user can see failure
@@ -413,20 +423,10 @@ public class HttpServerImpl implements HttpServer, Closeable {
 
     vertx.setContext(closeContext);
 
-    final CountDownLatch latch = new CountDownLatch(1);
-
-    ChannelGroupFuture fut = serverChannelGroup.close();
-    fut.addListener(cgf -> latch.countDown());
-
-    // Always sync
-    try {
-      latch.await(10, TimeUnit.SECONDS);
-    } catch (InterruptedException e) {
-    }
-
     metrics.close();
 
-    executeCloseDone(closeContext, done, fut.cause());
+    ChannelGroupFuture fut = serverChannelGroup.close();
+    fut.addListener(cgf -> executeCloseDone(closeContext, done, fut.cause()));
   }
 
   private void executeCloseDone(final ContextImpl closeContext, final Handler<AsyncResult<Void>> done, final Exception e) {
