@@ -74,8 +74,14 @@ public class TopologyListener extends ReceiverAdapter implements LambdaLogger {
 
       Predicate<Address> oldMemberNodeHasLeft = (member) -> !newMembers.contains(member);
       Predicate<Address> newMemberNodeJoin = (member) -> !oldMembers.contains(member);
-      Consumer<Address> nodeJoin = (member) -> listener.nodeAdded(member.toString());
-      Consumer<Address> nodeLeft = (member) -> listener.nodeAdded(member.toString());
+      Consumer<Address> nodeJoin = (member) -> {
+        logInfo(() -> "[" + name + "] - Notify node [" + member + "] has joined the cluster");
+        listener.nodeAdded(member.toString());
+      };
+      Consumer<Address> nodeLeft = (member) -> {
+        logInfo(() -> "[" + name + "] - Notify node [" + member + "] has left the cluster");
+        listener.nodeAdded(member.toString());
+      };
 
       newMembers.stream()
           .filter(newMemberNodeJoin)
